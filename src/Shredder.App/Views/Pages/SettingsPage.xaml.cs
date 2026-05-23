@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Shredder.App.ViewModels;
 
 namespace Shredder.App.Views.Pages;
@@ -38,24 +39,6 @@ public partial class SettingsPage : Page
         }
     }
 
-    private void OnAddForbidden(object sender, RoutedEventArgs e)
-        => AddPath(ForbiddenInput, _vm.ForbiddenPaths);
-
-    private void OnRemoveForbidden(object sender, RoutedEventArgs e)
-        => RemoveSelected(ForbiddenList, _vm.ForbiddenPaths);
-
-    private void OnAddWarn(object sender, RoutedEventArgs e)
-        => AddPath(WarnInput, _vm.WarnPaths);
-
-    private void OnRemoveWarn(object sender, RoutedEventArgs e)
-        => RemoveSelected(WarnList, _vm.WarnPaths);
-
-    private void OnAddAllow(object sender, RoutedEventArgs e)
-        => AddPath(AllowInput, _vm.AllowPaths);
-
-    private void OnRemoveAllow(object sender, RoutedEventArgs e)
-        => RemoveSelected(AllowList, _vm.AllowPaths);
-
     private void OnInstallShellMenu(object sender, RoutedEventArgs e)
         => _vm.InstallShellMenu();
 
@@ -65,20 +48,9 @@ public partial class SettingsPage : Page
     private void OnRefreshShellMenu(object sender, RoutedEventArgs e)
         => _vm.RefreshShellMenuStatus();
 
-    private static void AddPath(TextBox input, System.Collections.ObjectModel.ObservableCollection<string> target)
+    private void OnSettingsMouseWheel(object sender, MouseWheelEventArgs e)
     {
-        var text = input.Text?.Trim();
-        if (string.IsNullOrEmpty(text)) return;
-        if (target.Contains(text, StringComparer.OrdinalIgnoreCase)) return;
-        target.Add(text);
-        input.Clear();
-    }
-
-    private static void RemoveSelected(ListBox list, System.Collections.ObjectModel.ObservableCollection<string> target)
-    {
-        if (list.SelectedItem is string s)
-        {
-            target.Remove(s);
-        }
+        SettingsScrollViewer.ScrollToVerticalOffset(SettingsScrollViewer.VerticalOffset - e.Delta);
+        e.Handled = true;
     }
 }

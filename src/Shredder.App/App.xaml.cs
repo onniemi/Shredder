@@ -36,7 +36,8 @@ public partial class App : Application
                 .ConfigureAppConfiguration((ctx, cfg) =>
                 {
                     cfg.SetBasePath(AppContext.BaseDirectory);
-                    cfg.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+                    cfg.AddInMemoryCollection(ShredderDefaultConfiguration.Create());
+                    cfg.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
                     cfg.AddJsonFile($"appsettings.{ctx.HostingEnvironment.EnvironmentName}.json",
                         optional: true, reloadOnChange: true);
                     cfg.AddEnvironmentVariables(prefix: "SHREDDER_");
@@ -46,6 +47,11 @@ public partial class App : Application
                 .ConfigureServices((ctx, services) =>
                 {
                     services.AddShredderCore(ctx.Configuration);
+                    services.PostConfigure<ShredderOptions>(options =>
+                    {
+                        options.Reporting.OutputDirectory = ShredderAppPaths.ReportsDirectory;
+                        options.Logging.OutputDirectory = ShredderAppPaths.LogsDirectory;
+                    });
 
                     // WPF-UI 基础服务(用于 ContentDialog / Snackbar / Theme 等)
                     services.AddSingleton<IThemeService, ThemeService>();
@@ -144,9 +150,11 @@ public partial class App : Application
         {
             var dir = Environment.ExpandEnvironmentVariables(
                 string.IsNullOrWhiteSpace(loggingOpts.OutputDirectory)
-                    ? "%LOCALAPPDATA%\\Shredder\\Logs"
+                    ? ShredderAppPaths.LogsDirectory
                     : loggingOpts.OutputDirectory);
-            dir = Path.GetFullPath(dir);
+            dir = Path.IsPathFullyQualified(dir)
+                ? Path.GetFullPath(dir)
+                : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, dir));
             Directory.CreateDirectory(dir);
             var path = Path.Combine(dir, "shredder-.log");
 

@@ -56,7 +56,7 @@ jobs:
       - name: Restore
         run: dotnet restore src/Shredder.sln
 
-      - name: Publish CLI (shredder.exe)
+      - name: Publish CLI full (self-contained)
         shell: bash
         run: |
           dotnet publish src/Shredder.Cli/Shredder.Cli.csproj \
@@ -66,9 +66,21 @@ jobs:
             -p:PublishSingleFile=true \
             -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:Version=${{ steps.ver.outputs.version }} \
-            -o publish/cli
+            -o publish/cli-full
 
-      - name: Publish WPF App (Shredder.exe)
+      - name: Publish CLI light (requires .NET runtime)
+        shell: bash
+        run: |
+          dotnet publish src/Shredder.Cli/Shredder.Cli.csproj \
+            -c Release \
+            -r win-x64 \
+            --self-contained false \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:Version=${{ steps.ver.outputs.version }} \
+            -o publish/cli-light
+
+      - name: Publish WPF App full (self-contained)
         shell: bash
         run: |
           dotnet publish src/Shredder.App/Shredder.App.csproj \
@@ -78,19 +90,46 @@ jobs:
             -p:PublishSingleFile=true \
             -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:Version=${{ steps.ver.outputs.version }} \
-            -o publish/app
+            -o publish/app-full
 
-      - name: Zip CLI
+      - name: Publish WPF App light (requires .NET Desktop Runtime)
+        shell: bash
+        run: |
+          dotnet publish src/Shredder.App/Shredder.App.csproj \
+            -c Release \
+            -r win-x64 \
+            --self-contained false \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:Version=${{ steps.ver.outputs.version }} \
+            -o publish/app-light
+
+      - name: Publish WPF App simple (minimal UI, self-contained)
+        shell: bash
+        run: |
+          dotnet publish src/Shredder.App/Shredder.App.csproj \
+            -c Release \
+            -r win-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:SimpleUi=true \
+            -p:Version=${{ steps.ver.outputs.version }} \
+            -o publish/app-simple
+
+      - name: Zip release assets
         shell: pwsh
         run: |
-          Compress-Archive -Path publish/cli/* `
-            -DestinationPath shredder-cli-v${{ steps.ver.outputs.version }}-win-x64.zip
-
-      - name: Zip WPF App
-        shell: pwsh
-        run: |
-          Compress-Archive -Path publish/app/* `
-            -DestinationPath shredder-app-v${{ steps.ver.outputs.version }}-win-x64.zip
+          Compress-Archive -Path publish/cli-full/* `
+            -DestinationPath shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-full.zip
+          Compress-Archive -Path publish/cli-light/* `
+            -DestinationPath shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-light.zip
+          Compress-Archive -Path publish/app-full/* `
+            -DestinationPath shredder-app-v${{ steps.ver.outputs.version }}-win-x64-full.zip
+          Compress-Archive -Path publish/app-light/* `
+            -DestinationPath shredder-app-v${{ steps.ver.outputs.version }}-win-x64-light.zip
+          Compress-Archive -Path publish/app-simple/* `
+            -DestinationPath shredder-app-v${{ steps.ver.outputs.version }}-win-x64-simple.zip
 
       - name: Compute SHA-256 checksums
         # 输出格式与 GNU `sha256sum` 兼容:`<hex>  <filename>\n`,用户可 `sha256sum -c xxx.sha256` 校验。
@@ -98,21 +137,31 @@ jobs:
         # 所以用 [System.IO.File]::WriteAllText 显式控制编码和换行。
         shell: pwsh
         run: |
-          $cliZip = "shredder-cli-v${{ steps.ver.outputs.version }}-win-x64.zip"
-          $appZip = "shredder-app-v${{ steps.ver.outputs.version }}-win-x64.zip"
-          $cliHash = (Get-FileHash $cliZip -Algorithm SHA256).Hash.ToLower()
-          $appHash = (Get-FileHash $appZip -Algorithm SHA256).Hash.ToLower()
-          [System.IO.File]::WriteAllText("$cliZip.sha256", "$cliHash  $cliZip`n", [System.Text.Encoding]::ASCII)
-          [System.IO.File]::WriteAllText("$appZip.sha256", "$appHash  $appZip`n", [System.Text.Encoding]::ASCII)
-          Write-Host "CLI SHA-256: $cliHash"
-          Write-Host "APP SHA-256: $appHash"
+          $zips = @(
+            "shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-full.zip",
+            "shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-light.zip",
+            "shredder-app-v${{ steps.ver.outputs.version }}-win-x64-full.zip",
+            "shredder-app-v${{ steps.ver.outputs.version }}-win-x64-light.zip",
+            "shredder-app-v${{ steps.ver.outputs.version }}-win-x64-simple.zip"
+          )
+          foreach ($zip in $zips) {
+            $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+            [System.IO.File]::WriteAllText("$zip.sha256", "$hash  $zip`n", [System.Text.Encoding]::ASCII)
+            Write-Host "$zip SHA-256: $hash"
+          }
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: |
-            shredder-cli-v${{ steps.ver.outputs.version }}-win-x64.zip
-            shredder-app-v${{ steps.ver.outputs.version }}-win-x64.zip
-            shredder-cli-v${{ steps.ver.outputs.version }}-win-x64.zip.sha256
-            shredder-app-v${{ steps.ver.outputs.version }}-win-x64.zip.sha256
+            shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-full.zip
+            shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-light.zip
+            shredder-app-v${{ steps.ver.outputs.version }}-win-x64-full.zip
+            shredder-app-v${{ steps.ver.outputs.version }}-win-x64-light.zip
+            shredder-app-v${{ steps.ver.outputs.version }}-win-x64-simple.zip
+            shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-full.zip.sha256
+            shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-light.zip.sha256
+            shredder-app-v${{ steps.ver.outputs.version }}-win-x64-full.zip.sha256
+            shredder-app-v${{ steps.ver.outputs.version }}-win-x64-light.zip.sha256
+            shredder-app-v${{ steps.ver.outputs.version }}-win-x64-simple.zip.sha256

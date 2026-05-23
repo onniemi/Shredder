@@ -58,6 +58,7 @@ public static class ServiceCollectionExtensions
 
         // 5. 业务服务(无状态,单例即可)
         services.AddSingleton<ShredService>();
+        services.AddSingleton<ForceDeleteService>();
         services.AddSingleton<IRecycleBinEnumerator, DefaultRecycleBinEnumerator>();
         services.AddSingleton<IRecycleBinFileShredder, DefaultRecycleBinFileShredder>();
         services.AddSingleton<IRecycleBinShell, DefaultRecycleBinShell>();

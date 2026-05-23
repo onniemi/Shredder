@@ -2,115 +2,343 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-      xmlns:vm="clr-namespace:Shredder.App.ViewModels"
       Title="粉碎">
-    <Grid Margin="16">
+    <Grid Margin="32,24,32,20"
+          AllowDrop="True"
+          DragEnter="OnDragEnter"
+          Drop="OnDrop">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <ui:TextBlock Grid.Row="0" FontTypography="Title" Text="文件 / 目录粉碎"/>
-        <ui:TextBlock Grid.Row="0" Margin="0,32,0,0"
-                      FontTypography="Body"
-                      Appearance="Tertiary"
-                      Text="拖入文件或目录，选择算法后开始；操作不可逆。"/>
-
-        <!-- 拖放区 -->
-        <Border Grid.Row="1" Margin="0,16,0,0"
-                Background="{DynamicResource ControlFillColorDefaultBrush}"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                BorderThickness="1" CornerRadius="6" Padding="20"
-                AllowDrop="True"
-                DragEnter="OnDragEnter" Drop="OnDrop">
-            <StackPanel>
-                <ui:TextBlock FontTypography="BodyStrong" HorizontalAlignment="Center"
-                              Text="将文件 / 目录拖到这里，或点击下方「添加…」"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
-                    <ui:Button Content="添加文件…" Icon="{ui:SymbolIcon Add24}" Click="OnAddFilesClick"/>
-                    <ui:Button Content="添加目录…" Icon="{ui:SymbolIcon FolderAdd24}" Margin="8,0,0,0" Click="OnAddFolderClick"/>
-                    <ui:Button Content="清空列表" Icon="{ui:SymbolIcon Delete24}" Margin="8,0,0,0" Click="OnClearClick"/>
-                </StackPanel>
-            </StackPanel>
-        </Border>
-
-        <!-- 队列 -->
-        <Border Grid.Row="2" Margin="0,16,0,0"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                BorderThickness="1" CornerRadius="6">
-            <ListView ItemsSource="{Binding Jobs}" BorderThickness="0">
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn Header="路径" Width="320" DisplayMemberBinding="{Binding Path}"/>
-                        <GridViewColumn Header="类型" Width="60">
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding IsDirectory, Converter={StaticResource BoolToDirText}, FallbackValue=文件}"/>
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                        <GridViewColumn Header="大小" Width="100" DisplayMemberBinding="{Binding DisplaySize}"/>
-                        <GridViewColumn Header="算法" Width="150">
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate>
-                                    <ComboBox ItemsSource="{Binding DataContext.Algorithms, RelativeSource={RelativeSource AncestorType=Page}}"
-                                              SelectedItem="{Binding Algorithm, Mode=TwoWay}"
-                                              DisplayMemberPath="Name"/>
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                        <GridViewColumn Header="状态" Width="100" DisplayMemberBinding="{Binding Status}"/>
-                        <GridViewColumn Header="错误" Width="200" DisplayMemberBinding="{Binding ErrorMessage}"/>
-                    </GridView>
-                </ListView.View>
-            </ListView>
-        </Border>
-
-        <!-- 默认算法 + 进度 -->
-        <Grid Grid.Row="3" Margin="0,12,0,0">
+        <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="220"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <ui:TextBlock Grid.Column="0" VerticalAlignment="Center" Text="默认算法："/>
-            <ComboBox Grid.Column="1" Margin="8,0,0,0"
-                      ItemsSource="{Binding Algorithms}"
-                      SelectedItem="{Binding SelectedAlgorithm, Mode=TwoWay}"
-                      DisplayMemberPath="Name"/>
-            <ui:TextBlock Grid.Column="2" Margin="16,0,0,0" VerticalAlignment="Center"
-                          Appearance="Tertiary"
-                          Text="{Binding ProgressText}"/>
-            <ui:Button Grid.Column="3" Content="打开最近报告" Icon="{ui:SymbolIcon DocumentBulletList24}"
-                       Margin="8,0,0,0"
-                       IsEnabled="{Binding LastReportPath, Converter={StaticResource NullToBool}}"
-                       Click="OnOpenLastReportClick"/>
-            <ui:Button Grid.Column="4" Content="报告文件夹" Icon="{ui:SymbolIcon Folder24}"
-                       Margin="8,0,0,0"
-                       Click="OnOpenReportsFolderClick"/>
+
+            <Border Width="70" Height="70" CornerRadius="8"
+                    Background="#FFFFB020"
+                    VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="DeleteDismiss24"
+                               FontSize="40"
+                               Foreground="#FF1F1F1F"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+            </Border>
+
+            <StackPanel Grid.Column="1" Margin="20,4,0,0" VerticalAlignment="Center">
+                <TextBlock Text="强制粉碎文件和文件夹"
+                           FontSize="22"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                <TextBlock Margin="0,10,0,0"
+                           Text="将需要粉碎的文件或文件夹添加到列表中"
+                           FontSize="14"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+
+            <ui:Button Grid.Column="2"
+                       Content="一键粉碎"
+                       Appearance="Primary"
+                       Padding="26,8"
+                       MinWidth="96"
+                       VerticalAlignment="Center"
+                       IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"
+                       Click="OnStartClick"/>
         </Grid>
 
-        <!-- 操作 + 进度条 -->
-        <Grid Grid.Row="4" Margin="0,12,0,0">
+        <Border Grid.Row="1" Margin="0,28,0,0"
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="4">
+            <Grid Height="36">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="260"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="100"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Margin="12,0" VerticalAlignment="Center" Text="名称"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                <TextBlock Grid.Column="1" Margin="12,0" VerticalAlignment="Center" Text="路径"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                <TextBlock Grid.Column="2" Margin="12,0" VerticalAlignment="Center" Text="大小"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                <TextBlock Grid.Column="3" Margin="12,0" VerticalAlignment="Center" Text="操作"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1,0,1,1"
+                CornerRadius="0,0,4,4">
+            <Grid>
+                <ListView ItemsSource="{Binding Jobs}"
+                          BorderThickness="0"
+                          Background="Transparent"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Height="40">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="260"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="100"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">
+                                    <ui:SymbolIcon Symbol="Document24" Width="18" Height="18" Margin="0,0,8,0"
+                                                   Foreground="#FFFFB020"/>
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Margin="12,0" VerticalAlignment="Center"
+                                           Text="{Binding ParentPath}" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Column="2" Margin="12,0" VerticalAlignment="Center"
+                                           Text="{Binding DisplaySize}" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                <Button Grid.Column="3" Margin="12,0" Padding="0" BorderThickness="0"
+                                        Background="Transparent"
+                                        Foreground="#FFFFB020"
+                                        Content="移除"
+                                        HorizontalAlignment="Left"
+                                        Click="OnRemoveJobClick"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            IsHitTestVisible="False">
+                    <StackPanel.Style>
+                        <Style TargetType="{x:Type StackPanel}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Jobs.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <ui:SymbolIcon Symbol="DeleteDismiss24"
+                                   FontSize="74"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Opacity="0.55"
+                                   HorizontalAlignment="Center"/>
+                    <TextBlock Margin="0,20,0,0"
+                               Text="拖入文件或文件夹到这里"
+                               FontSize="15"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Margin="0,8,0,0"
+                               Text="也可以点击右下角添加文件或添加文件夹"
+                               FontSize="13"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="3" Margin="0,18,0,0">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <ProgressBar Grid.Column="0" Height="6" Minimum="0" Maximum="100"
-                         Value="{Binding ProgressPercent}" VerticalAlignment="Center"/>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="16,0,0,0">
-                <ui:Button Content="开始粉碎" Appearance="Danger" Icon="{ui:SymbolIcon Delete24}"
-                           IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"
-                           Click="OnStartClick"/>
-                <ui:Button Content="取消" Margin="8,0,0,0"
-                           IsEnabled="{Binding IsBusy}"
-                           Click="OnCancelClick"/>
-            </StackPanel>
+
+            <Button Content="粉碎历史"
+                    Padding="0"
+                    BorderThickness="0"
+                    Background="Transparent"
+                    Foreground="#FFFFB020"
+                    VerticalAlignment="Center"
+                    Click="OnOpenLastReportClick"/>
+
+            <ui:TextBlock Grid.Column="1"
+                          Margin="12,0,0,0"
+                          VerticalAlignment="Center"
+                          Appearance="Tertiary"
+                          Text="{Binding ProgressText}"/>
+
+            <Button Grid.Column="2"
+                    Content="添加文件"
+                    Padding="0"
+                    BorderThickness="0"
+                    Background="Transparent"
+                    Foreground="#FFFFB020"
+                    VerticalAlignment="Center"
+                    Click="OnAddFilesClick"/>
+            <Button Grid.Column="3"
+                    Margin="20,0,0,0"
+                    Content="添加文件夹"
+                    Padding="0"
+                    BorderThickness="0"
+                    Background="Transparent"
+                    Foreground="#FFFFB020"
+                    VerticalAlignment="Center"
+                    Click="OnAddFolderClick"/>
+        </Grid>
+
+        <Grid Grid.RowSpan="4"
+              Background="#FF1F1F1F"
+              Grid.IsSharedSizeScope="True"
+              Visibility="{Binding IsHistoryVisible, Converter={StaticResource BoolToVisibility}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Width="70" Height="70" CornerRadius="35"
+                        BorderBrush="#FFFFB020"
+                        BorderThickness="2"
+                        VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="History24"
+                                   FontSize="36"
+                                   Foreground="#FFFFB020"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                </Border>
+
+                <StackPanel Grid.Column="1" Margin="22,6,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="粉碎历史"
+                               FontSize="24"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                    <TextBlock Margin="0,10,0,0"
+                               Text="{Binding HistorySummary}"
+                               FontSize="14"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+
+                <ui:Button Grid.Column="2"
+                           Content="清空历史"
+                           Appearance="Primary"
+                           Padding="20,8"
+                           MinWidth="112"
+                           VerticalAlignment="Center"
+                           Click="OnClearHistoryClick"/>
+            </Grid>
+
+            <Border Grid.Row="1" Margin="0,28,0,0"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <Grid Height="36">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" MinWidth="154" SharedSizeGroup="HistoryTimeColumn"/>
+                        <ColumnDefinition Width="1.15*"/>
+                        <ColumnDefinition Width="1.6*"/>
+                        <ColumnDefinition Width="Auto" MinWidth="104" SharedSizeGroup="HistorySizeColumn"/>
+                        <ColumnDefinition Width="Auto" MinWidth="92" SharedSizeGroup="HistoryResultColumn"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Margin="12,0" VerticalAlignment="Center" Text="时间"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Margin="12,0" VerticalAlignment="Center" Text="名称"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Grid.Column="2" Margin="12,0" VerticalAlignment="Center" Text="路径"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Grid.Column="3" Margin="12,0" VerticalAlignment="Center" Text="大小"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Grid.Column="4" Margin="12,0" VerticalAlignment="Center" Text="结果"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="2"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1,0,1,1"
+                    CornerRadius="0,0,4,4">
+                <ListView ItemsSource="{Binding HistoryItems}"
+                          BorderThickness="0"
+                          Background="Transparent"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="{x:Type ListViewItem}">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid MinHeight="42">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" MinWidth="154" SharedSizeGroup="HistoryTimeColumn"/>
+                                    <ColumnDefinition Width="1.15*"/>
+                                    <ColumnDefinition Width="1.6*"/>
+                                    <ColumnDefinition Width="Auto" MinWidth="104" SharedSizeGroup="HistorySizeColumn"/>
+                                    <ColumnDefinition Width="Auto" MinWidth="92" SharedSizeGroup="HistoryResultColumn"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Margin="12,0" VerticalAlignment="Center"
+                                           Text="{Binding CompletedAtText}"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Column="1" Margin="12,0" VerticalAlignment="Center"
+                                           Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                <StackPanel Grid.Column="2" Margin="12,6" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding ParentPath}" TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="{Binding Detail}" TextTrimming="CharacterEllipsis"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="3" Margin="12,0" VerticalAlignment="Center"
+                                           Text="{Binding DisplaySize}"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Column="4" Margin="12,0" VerticalAlignment="Center"
+                                           Text="{Binding StatusText}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Border>
+
+            <Grid Grid.Row="3" Margin="0,18,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Content="返回"
+                        Padding="0"
+                        BorderThickness="0"
+                        Background="Transparent"
+                        Foreground="#FFFFB020"
+                        VerticalAlignment="Center"
+                        Click="OnBackFromHistoryClick"/>
+
+                <ui:TextBlock Grid.Column="1"
+                              Margin="12,0,0,0"
+                              VerticalAlignment="Center"
+                              Appearance="Tertiary"
+                              Text="{Binding HistorySummary}"/>
+
+                <Button Grid.Column="2"
+                        Content="刷新"
+                        Padding="0"
+                        BorderThickness="0"
+                        Background="Transparent"
+                        Foreground="#FFFFB020"
+                        VerticalAlignment="Center"
+                        Click="OnRefreshHistoryClick"/>
+            </Grid>
         </Grid>
     </Grid>
 </Page>

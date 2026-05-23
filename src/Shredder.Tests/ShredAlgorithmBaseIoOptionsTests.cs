@@ -9,7 +9,7 @@ namespace Shredder.Tests;
 
 /// <summary>
 /// 验证 ShredderIoOptions 的 BufferSizeBytes / FlushEveryNBuffers / ProgressReportIntervalMs
-/// 三个配置项在算法层真正生效（参见 docs/ClaudeCode_剩余工作交接.md §4.1）。
+/// 三个配置项在算法层真正生效。
 /// </summary>
 public class ShredAlgorithmBaseIoOptionsTests
 {

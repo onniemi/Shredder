@@ -5,6 +5,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Shredder.Core.Configuration;
 
 namespace Shredder.Core.Diagnostics;
 
@@ -76,9 +77,7 @@ public sealed class DiagnosticsExporter : IDiagnosticsExporter
 
     private static string ResolveDirectory(string? raw)
     {
-        var expanded = Environment.ExpandEnvironmentVariables(
-            string.IsNullOrWhiteSpace(raw) ? "%LOCALAPPDATA%\\Shredder\\Diagnostics" : raw);
-        return Path.GetFullPath(expanded);
+        return ShredderAppPaths.ResolveDirectory(raw, Path.Combine("data", "diagnostics"));
     }
 
     private static string RenderHtml(DiagnosticsInfo d)

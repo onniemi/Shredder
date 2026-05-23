@@ -38,7 +38,16 @@
 
   <ItemGroup>
     <None Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
   </ItemGroup>
+
+  <Target Name="RemoveExternalConfigurationAndSymbolsFromPublish" AfterTargets="Publish" Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+      <PublishedSymbolFiles Include="$(PublishDir)**\*.pdb" />
+      <PublishedExternalConfigurationFiles Include="$(PublishDir)**\appsettings*.json" />
+    </ItemGroup>
+    <Delete Files="@(PublishedSymbolFiles);@(PublishedExternalConfigurationFiles)" />
+  </Target>
 </Project>

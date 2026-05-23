@@ -193,6 +193,69 @@ public class CliE2ETests
     }
 
     [Fact]
+    public async Task RealShred_NeutralPathWithoutYes_DoesNotAskForConfirmation()
+    {
+        var exe = LocateShredderExe();
+        if (exe is null) return;
+
+        var (tempDir, victim) = CreateNeutralVictimFile("no-confirm");
+        try
+        {
+            var result = await RunShredderAsync(exe, new[] { victim, "--quiet" });
+
+            Assert.Equal(0, result.ExitCode);
+            Assert.False(File.Exists(victim), "普通非系统路径不应要求二次确认,应直接粉碎临时文件。");
+            Assert.DoesNotContain("请输入", result.StdOut + result.StdErr, StringComparison.Ordinal);
+        }
+        finally
+        {
+            SafeDelete(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task DryRun_WarnPathWithoutYes_DoesNotAskForConfirmation()
+    {
+        var exe = LocateShredderExe();
+        if (exe is null) return;
+
+        var (tempDir, victim) = CreateVictimFile("warn-dry-run-no-confirm");
+        try
+        {
+            var result = await RunShredderAsync(exe, new[] { victim, "--dry-run", "--quiet" });
+
+            Assert.Equal(0, result.ExitCode);
+            Assert.True(File.Exists(victim), "dry-run 即使命中警告路径也不能删除文件。");
+            Assert.DoesNotContain("请输入", result.StdOut + result.StdErr, StringComparison.Ordinal);
+        }
+        finally
+        {
+            SafeDelete(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task RealShred_WarnPathWithoutYes_StillAsksForConfirmation()
+    {
+        var exe = LocateShredderExe();
+        if (exe is null) return;
+
+        var (tempDir, victim) = CreateVictimFile("warn-real-confirm");
+        try
+        {
+            var result = await RunShredderAsync(exe, new[] { victim, "--quiet" });
+
+            Assert.Equal(3, result.ExitCode);
+            Assert.True(File.Exists(victim), "命中警告路径且未确认时,不应删除文件。");
+            Assert.Contains("请输入", result.StdOut + result.StdErr, StringComparison.Ordinal);
+        }
+        finally
+        {
+            SafeDelete(tempDir);
+        }
+    }
+
+    [Fact]
     public async Task Help_ExitsZero_NonEmptyOutput()
     {
         var exe = LocateShredderExe();
@@ -237,6 +300,15 @@ public class CliE2ETests
         // 写入一个非空、可识别的固定字节序列:既能验证 "dry-run 后字节不变",
         // 也保证真粉碎路径要走完整算法循环(空文件容易绕过部分分支)。
         File.WriteAllBytes(victim, new byte[] { 0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0x12, 0x34 });
+        return (dir, victim);
+    }
+
+    private static (string TempDir, string Victim) CreateNeutralVictimFile(string tag)
+    {
+        var dir = Path.Combine(AppContext.BaseDirectory, $"shredder-e2e-{tag}-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var victim = Path.Combine(dir, "victim.bin");
+        File.WriteAllBytes(victim, new byte[] { 0xFE, 0xED, 0xFA, 0xCE, 0x42, 0x24 });
         return (dir, victim);
     }
 

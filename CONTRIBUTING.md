@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢你帮这个项目变得更快、更安全、更专业。
+感谢你帮这个项目变得更快、更安全、更可靠。
 
 ## 开发环境
 
@@ -28,6 +28,5 @@ dotnet test Shredder.Tests\Shredder.Tests.csproj -c Release --no-build
 - [ ] `dotnet build Shredder.sln -c Release` 通过。
 - [ ] `dotnet test Shredder.Tests\Shredder.Tests.csproj -c Release --no-build` 通过。
 - [ ] 涉及文件系统或安全边界时已补测试。
-- [ ] 涉及用户可见行为时已更新 README 或 docs。
+- [ ] 涉及用户可见行为时已更新 README。
 - [ ] 没有提交 `bin/`、`obj/`、本地日志、截图、发布包等生成物。
-

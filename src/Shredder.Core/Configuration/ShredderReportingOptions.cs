@@ -10,9 +10,9 @@ public sealed class ShredderReportingOptions
 
     /// <summary>
     /// 报告输出目录，支持 <c>%LOCALAPPDATA%</c> 等环境变量。
-    /// 留空时默认 <c>%LOCALAPPDATA%\Shredder\Reports</c>。
+    /// 留空时默认 <c>程序目录\data\reports</c>。
     /// </summary>
-    public string OutputDirectory { get; set; } = "%LOCALAPPDATA%\\Shredder\\Reports";
+    public string OutputDirectory { get; set; } = "data\\reports";
 
     /// <summary>是否输出机器可读的 JSON 报告（用于二次处理 / 留存）。</summary>
     public bool FormatJson { get; set; } = true;

@@ -113,7 +113,8 @@ namespace Shredder.Cli
                 .ConfigureAppConfiguration((ctx, cfg) =>
                 {
                     cfg.SetBasePath(AppContext.BaseDirectory);
-                    cfg.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+                    cfg.AddInMemoryCollection(ShredderDefaultConfiguration.Create());
+                    cfg.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
                     cfg.AddJsonFile($"appsettings.{ctx.HostingEnvironment.EnvironmentName}.json",
                         optional: true, reloadOnChange: true);
                     cfg.AddEnvironmentVariables(prefix: "SHREDDER_");
@@ -123,6 +124,11 @@ namespace Shredder.Cli
                 .ConfigureServices((ctx, services) =>
                 {
                     services.AddShredderCore(ctx.Configuration);
+                    services.PostConfigure<ShredderOptions>(options =>
+                    {
+                        options.Reporting.OutputDirectory = ShredderAppPaths.ReportsDirectory;
+                        options.Logging.OutputDirectory = ShredderAppPaths.LogsDirectory;
+                    });
                     ApplyReportingOverrides(services, parsed);
                 })
                 .Build();
@@ -221,15 +227,6 @@ namespace Shredder.Cli
             {
                 PrintDryRunPreview(shred, checkedPaths, algoId);
                 return ExitOk;
-            }
-
-            // 没有 --yes 且未单独触发 Warn 时,仍然要求最终的二次确认 —— 粉碎不可逆,必须明确
-            if (!parsed.AssumeYes && checkedPaths.Count > 0)
-            {
-                Console.WriteLine();
-                Console.WriteLine($"即将粉碎 {checkedPaths.Count} 个目标,该操作不可逆。");
-                if (!ConfirmOrFail(options.Ui.ConfirmationKeyword, assumeYes: false))
-                    return ExitDeclined;
             }
 
             int failures = 0;
@@ -562,7 +559,7 @@ namespace Shredder.Cli
                       --explain          同 --dry-run,语义偏向「解释会发生什么」
                       --report           生成本次批次的审计报告(JSON / HTML)
                       --report-format X  报告格式:json / html / both(指定时隐式启用 --report)
-                      --report-dir DIR   报告输出目录(默认 %LOCALAPPDATA%\Shredder\Reports)
+                      --report-dir DIR   报告输出目录(默认 程序目录\data\reports)
                       --help             显示本帮助
                       --version          显示版本号
 

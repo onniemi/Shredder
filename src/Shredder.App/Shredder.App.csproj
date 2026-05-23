@@ -5,9 +5,16 @@
     <RootNamespace>Shredder.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>Shredder</AssemblyName>
-    <ApplicationIcon></ApplicationIcon>
+    <ApplicationIcon>Assets\ShredderIcon.ico</ApplicationIcon>
     <UseWindowsForms>false</UseWindowsForms>
     <SatelliteResourceLanguages>en;zh-Hans</SatelliteResourceLanguages>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+    <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
+    <CopyOutputSymbolsToPublishDirectory Condition="'$(Configuration)' == 'Release'">false</CopyOutputSymbolsToPublishDirectory>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(SimpleUi)' == 'true'">
+    <DefineConstants>$(DefineConstants);SIMPLE_UI</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,12 +46,26 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Assets\ShredderIcon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
     <None Update="appsettings.Development.json">
       <DependentUpon>appsettings.json</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
   </ItemGroup>
+
+  <Target Name="RemoveReleaseSymbolsFromPublish" AfterTargets="Publish" Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+      <PublishedSymbolFiles Include="$(PublishDir)**\*.pdb" />
+      <PublishedExternalConfigurationFiles Include="$(PublishDir)**\appsettings*.json" />
+    </ItemGroup>
+    <Delete Files="@(PublishedSymbolFiles);@(PublishedExternalConfigurationFiles)" />
+  </Target>
 </Project>

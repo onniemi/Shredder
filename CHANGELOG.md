@@ -30,7 +30,7 @@
 - 新增 `FileSystemBoundaryTests`:覆盖 ADS、符号链接文件、Junction 目录、只读/隐藏属性失败恢复、占用文件失败等 5 个边界场景；不支持 ADS 或无权限创建重解析点时对应测试路径会跳过。
 - 回收站清空返回 `RecycleBinEmptyResult` 结构化结果,通过 `IRecycleBinEnumerator` / `IRecycleBinFileShredder` / `IRecycleBinShell` 隔离真实系统回收站;CLI/GUI 展示成功/失败/跳过/Shell HRESULT 摘要,失败项只记录脱敏路径哈希。新增 8 个 fake 测试,覆盖单项失败不中断、计数、Shell HRESULT、取消、路径脱敏和配置开关。
 - 新增 CLI E2E 与 publish smoke:真实 `shredder.exe` 子进程覆盖 dry-run/explain、dry-run+report 不落盘、真实粉碎 JSON 报告、help/version;`dotnet publish` 覆盖 CLI 与 WPF App,验证可执行文件和 `appsettings.json` 产出。
-- 新增 `src/Shredder.Benchmarks` BenchmarkDotNet 项目和 `docs/benchmarks` 文档:覆盖单文件 Clear/ZeroFill/CryptoErase 对比、多小文件目录 `MaxConcurrentFiles=1` vs `=4` 对比;benchmark 默认不进入 CI,需手动 `dotnet run -c Release --project src/Shredder.Benchmarks/Shredder.Benchmarks.csproj`。
+- 新增 `src/Shredder.Benchmarks` BenchmarkDotNet 项目:覆盖单文件 Clear/ZeroFill/CryptoErase 对比、多小文件目录 `MaxConcurrentFiles=1` vs `=4` 对比;benchmark 默认不进入 CI,需手动 `dotnet run -c Release --project src/Shredder.Benchmarks/Shredder.Benchmarks.csproj`。
 
 ### Fixed
 
@@ -43,7 +43,7 @@
 ### Known limitations
 
 - `Shredder:Io:UseUnbufferedIo` 配置项保留但暂未实装(需要扇区对齐 `FILE_FLAG_NO_BUFFERING` 支持),将在后续版本接入。
-- 用户运行发布产物需要安装 **.NET 10 Desktop Runtime (win-x64)**;Release 流水线已切到 `--self-contained true`,zip 包内自带运行时,可直接解压运行,无需额外安装。
+- Release 同时提供 5 个 zip:`app simple` 为简约图形界面,`app full` / `app light` 为完整图形界面,`cli full` / `cli light` 为命令行版;`full` / `simple` 包内自带运行时,`light` 体积更小但要求用户已安装 .NET 10 / .NET 10 Desktop Runtime。
 
 ## [0.2.0] - 待发布
 
@@ -57,10 +57,9 @@
 - 多目标支持:一次命令传多个文件/目录,部分失败以退出码 4 区分。
 - 退出码契约:`0` 成功、`1` 用法错误/通用失败、`2` 命中 Forbidden(`-y` 不能跳过)、`3` 用户拒绝二次确认、`4` 多目标部分失败、`5` 收到 Ctrl-C。
 - GitHub Actions CI:`build` job 在 `windows-latest` 上跑 `dotnet restore` + `dotnet build -c Release` + `dotnet test`,任何 warning 因 `TreatWarningsAsErrors` 直接红。
-- Tag 触发的 Release 流水线:推 `v*` tag 自动 `dotnet publish` CLI 和 WPF 各自的 win-x64 self-contained single-file zip,版本号从 tag 注入。
+- Tag 触发的 Release 流水线:推 `v*` tag 自动发布 win-x64 的 `app simple`、`app full`、`app light`、`cli full`、`cli light` 五个包,版本号从 tag 注入。
 - 发布产物附带 SHA-256 校验和(`.sha256` 文件,GNU `sha256sum -c` 兼容,LF 行尾)。
 - `.github/` 仓库脚手架:`PULL_REQUEST_TEMPLATE.md`、`ISSUE_TEMPLATE/`(Bug Form + Feature Form + config redirect 到 SECURITY.md)。
-- `docs/发布检查清单.md`:每次公开 Release 前的人工核对项。
 - README 顶部 CI 构建徽章。
 
 ### Changed

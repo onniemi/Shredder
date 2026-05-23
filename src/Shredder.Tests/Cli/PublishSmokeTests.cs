@@ -6,7 +6,7 @@ namespace Shredder.Tests.Cli;
 
 /// <summary>
 /// Release 发布烟雾测试:跑一遍 <c>dotnet publish</c> 到临时目录,
-/// 确保关键交付物(CLI 可执行 + App 可执行 + appsettings.json)都被正确产出。
+/// 确保关键交付物(CLI 可执行 + App 可执行)都被正确产出。
 /// </summary>
 /// <remarks>
 /// 这一组测试故意保持"轻烟雾"而不是"完整集成":
@@ -23,7 +23,7 @@ public class PublishSmokeTests
     private const int PublishTimeoutMs = 5 * 60 * 1000;
 
     [Fact]
-    public async Task Cli_Publish_ProducesRunnableExeAndAppsettings()
+    public async Task Cli_Publish_ProducesRunnableExeWithoutExternalAppsettings()
     {
         if (!TryLocateRepo(out var repoRoot, out var slnPath)) return;
         if (!HasDotnetCli()) return;
@@ -51,8 +51,8 @@ public class PublishSmokeTests
 
             var exe = Path.Combine(publishDir, "shredder.exe");
             Assert.True(File.Exists(exe), $"发布目录应当包含 shredder.exe,实际目录内容:{ListDir(publishDir)}");
-            Assert.True(File.Exists(Path.Combine(publishDir, "appsettings.json")),
-                "发布目录应当包含 appsettings.json(CopyToOutputDirectory=PreserveNewest)。");
+            Assert.False(File.Exists(Path.Combine(publishDir, "appsettings.json")),
+                "CLI 发布目录不应携带 appsettings.json;默认配置内置,运行时输出统一落到程序目录。");
 
             // 起一个真子进程跑 --help, 烟雾验证 "发布包能被执行"。
             var help = await RunChildAsync(exe, new[] { "--help" }, timeoutMs: 30_000);
@@ -71,7 +71,7 @@ public class PublishSmokeTests
     }
 
     [Fact]
-    public async Task App_Publish_ProducesExeAndAppsettings()
+    public async Task App_Publish_ProducesExeWithoutExternalAppsettings()
     {
         if (!TryLocateRepo(out var repoRoot, out _)) return;
         if (!HasDotnetCli()) return;
@@ -102,8 +102,8 @@ public class PublishSmokeTests
             var dll = Path.Combine(publishDir, "Shredder.dll");
             Assert.True(File.Exists(exe) || File.Exists(dll),
                 $"发布目录应当包含 Shredder.exe 或 Shredder.dll,实际:{ListDir(publishDir)}");
-            Assert.True(File.Exists(Path.Combine(publishDir, "appsettings.json")),
-                "WPF 发布目录应当包含 appsettings.json。");
+            Assert.False(File.Exists(Path.Combine(publishDir, "appsettings.json")),
+                "WPF 发布目录不应携带 appsettings.json; GUI 默认配置内置并固定输出到程序目录。");
         }
         finally
         {
@@ -131,6 +131,9 @@ public class PublishSmokeTests
                 "--self-contained", "true",
                 "-p:PublishSingleFile=true",
                 "-p:IncludeNativeLibrariesForSelfExtract=true",
+                "-p:DebugType=none",
+                "-p:DebugSymbols=false",
+                "-p:CopyOutputSymbolsToPublishDirectory=false",
                 "-o", publishDir,
                 "--nologo",
                 "--verbosity", "minimal",
@@ -142,6 +145,8 @@ public class PublishSmokeTests
 
             var exe = Path.Combine(publishDir, "shredder.exe");
             Assert.True(File.Exists(exe), $"single-file publish should contain shredder.exe, actual:{ListDir(publishDir)}");
+            var files = Directory.EnumerateFiles(publishDir).Select(Path.GetFileName).ToArray();
+            Assert.Equal(new[] { "shredder.exe" }, files);
 
             var help = await RunChildAsync(exe, new[] { "--help" }, timeoutMs: 30_000);
             Assert.Equal(0, help.ExitCode);
@@ -161,7 +166,7 @@ public class PublishSmokeTests
     }
 
     [Fact]
-    public async Task App_SingleFilePublish_ProducesRunnableExeAndAppsettings()
+    public async Task App_SingleFilePublish_ProducesOnlyRunnableExe()
     {
         if (!TryLocateRepo(out var repoRoot, out _)) return;
         if (!HasDotnetCli()) return;
@@ -191,8 +196,8 @@ public class PublishSmokeTests
 
             Assert.True(File.Exists(Path.Combine(publishDir, "Shredder.exe")),
                 $"single-file publish should contain Shredder.exe, actual:{ListDir(publishDir)}");
-            Assert.True(File.Exists(Path.Combine(publishDir, "appsettings.json")),
-                "single-file WPF publish should include appsettings.json.");
+            var files = Directory.EnumerateFiles(publishDir).Select(Path.GetFileName).ToArray();
+            Assert.Equal(new[] { "Shredder.exe" }, files);
         }
         finally
         {

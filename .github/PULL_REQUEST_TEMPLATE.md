@@ -23,7 +23,7 @@
 - [ ] `dotnet build src/Shredder.sln -c Release` 通过(`TreatWarningsAsErrors` 下无新增警告)
 - [ ] `dotnet test src/Shredder.Tests/Shredder.Tests.csproj -c Release --no-build` 通过
 - [ ] 涉及文件系统 / 安全边界的改动已补单元测试
-- [ ] 涉及用户可见行为的改动已更新 `README.md` 或 `docs/`
+- [ ] 涉及用户可见行为的改动已更新 `README.md`
 - [ ] 未提交 `bin/`、`obj/`、本地日志、截图、发布包
 
 ## 安全相关(如适用)

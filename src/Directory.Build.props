@@ -12,7 +12,7 @@
     <WarningsAsErrors />
     <WarningsNotAsErrors>NU1701;CA1416</WarningsNotAsErrors>
 
-    <!-- 启用最新代码分析器(Recommended 是专业级基线;AllEnabledByDefault 会启用大量噪声规则) -->
+    <!-- 启用最新代码分析器(Recommended 是较稳妥的基线;AllEnabledByDefault 会启用大量噪声规则) -->
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <AnalysisMode>Recommended</AnalysisMode>

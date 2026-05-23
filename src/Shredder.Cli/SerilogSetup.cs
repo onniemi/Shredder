@@ -50,9 +50,11 @@ internal static class SerilogSetup
         {
             var dir = Environment.ExpandEnvironmentVariables(
                 string.IsNullOrWhiteSpace(loggingOpts.OutputDirectory)
-                    ? "%LOCALAPPDATA%\\Shredder\\Logs"
+                    ? ShredderAppPaths.LogsDirectory
                     : loggingOpts.OutputDirectory);
-            dir = Path.GetFullPath(dir);
+            dir = Path.IsPathFullyQualified(dir)
+                ? Path.GetFullPath(dir)
+                : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, dir));
             Directory.CreateDirectory(dir);
             var path = Path.Combine(dir, "shredder-cli-.log");
 

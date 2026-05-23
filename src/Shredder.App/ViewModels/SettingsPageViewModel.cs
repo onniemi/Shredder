@@ -104,7 +104,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         _logger = logger;
 
         Algorithms = registry.All;
-        _settingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        _settingsPath = ShredderAppPaths.SettingsPath;
 
         // 初值
         _theme = _options.Ui.Theme;
@@ -139,7 +139,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         _recycleBinCallShellEmpty = _options.RecycleBin.CallShellEmptyAfterShred;
 
         _reportingEnabled = _options.Reporting.Enabled;
-        _reportingOutputDirectory = _options.Reporting.OutputDirectory;
+        _reportingOutputDirectory = string.IsNullOrWhiteSpace(_options.Reporting.OutputDirectory)
+            ? ShredderAppPaths.ReportsDirectory
+            : _options.Reporting.OutputDirectory;
         _reportingFormatJson = _options.Reporting.FormatJson;
         _reportingFormatHtml = _options.Reporting.FormatHtml;
         _reportingAutoOpen = _options.Reporting.AutoOpen;
@@ -193,7 +195,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             _options.RecycleBin.CallShellEmptyAfterShred = RecycleBinCallShellEmpty;
 
             _options.Reporting.Enabled = ReportingEnabled;
-            _options.Reporting.OutputDirectory = ReportingOutputDirectory ?? string.Empty;
+            ReportingOutputDirectory = ShredderAppPaths.ReportsDirectory;
+            _options.Reporting.OutputDirectory = ReportingOutputDirectory;
             _options.Reporting.FormatJson = ReportingFormatJson;
             _options.Reporting.FormatHtml = ReportingFormatHtml;
             _options.Reporting.AutoOpen = ReportingAutoOpen;

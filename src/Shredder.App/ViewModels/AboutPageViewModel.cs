@@ -12,7 +12,7 @@ namespace Shredder.App.ViewModels;
 
 /// <summary>
 /// 关于页 VM。展示版本、构建、运行时信息、许可与第三方组件;
-/// 同时提供「导出诊断包」入口,采集后写到 <c>%LOCALAPPDATA%\Shredder\Diagnostics</c>。
+/// 同时提供「导出诊断包」入口,采集后写到 <c>程序目录\data\diagnostics</c>。
 /// </summary>
 public sealed partial class AboutPageViewModel : ObservableObject
 {
@@ -165,16 +165,13 @@ public sealed partial class AboutPageViewModel : ObservableObject
 
     private static string ResolveDiagnosticsDirectory()
     {
-        var expanded = Environment.ExpandEnvironmentVariables("%LOCALAPPDATA%\\Shredder\\Diagnostics");
-        return Path.GetFullPath(expanded);
+        return ShredderAppPaths.DiagnosticsDirectory;
     }
 
     private string ResolveLogsDirectory()
     {
         var raw = _options.CurrentValue.Logging.OutputDirectory;
-        var expanded = Environment.ExpandEnvironmentVariables(
-            string.IsNullOrWhiteSpace(raw) ? "%LOCALAPPDATA%\\Shredder\\Logs" : raw);
-        return Path.GetFullPath(expanded);
+        return ShredderAppPaths.ResolveDirectory(raw, Path.Combine("data", "logs"));
     }
 
     [SuppressMessage("Design", "CA1031:DoNotCatchGeneralExceptionTypes",

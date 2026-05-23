@@ -3,16 +3,12 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="设置">
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer x:Name="SettingsScrollViewer"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  PreviewMouseWheel="OnSettingsMouseWheel">
         <Grid Margin="16">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -22,291 +18,79 @@
 
             <ui:TextBlock Grid.Row="0" FontTypography="Title" Text="设置"/>
             <ui:TextBlock Grid.Row="0" Margin="0,32,0,0" FontTypography="Body" Appearance="Tertiary"
-                          Text="所有改动需点击「保存」后才会写入 appsettings.json，部分项重启后生效。"/>
+                          Text="只保留日常需要调整的选项。安全策略继续由默认配置托管。"/>
 
-            <!-- 界面 -->
             <ui:CardExpander Grid.Row="1" Margin="0,16,0,0" Icon="{ui:SymbolIcon DarkTheme24}" IsExpanded="True"
-                             Header="界面">
+                             Header="常规">
                 <StackPanel>
                     <Grid Margin="0,4">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="260"/>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="280"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock VerticalAlignment="Center" Text="主题"/>
                         <ComboBox Grid.Column="1" ItemsSource="{Binding ThemeOptions}"
                                   SelectedItem="{Binding Theme, Mode=TwoWay}"/>
-                        <TextBlock Grid.Column="2" Margin="12,0,0,0" Foreground="Gray" VerticalAlignment="Center"
-                                   Text="System / Light / Dark"/>
                     </Grid>
-                    <Grid Margin="0,4">
+                    <Grid Margin="0,8,0,4">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="260"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="确认关键词"/>
-                        <ui:TextBox Grid.Column="1" Text="{Binding ConfirmationKeyword, Mode=TwoWay}"/>
-                        <TextBlock Grid.Column="2" Margin="12,0,0,0" Foreground="Gray" VerticalAlignment="Center"
-                                   Text="在确认对话框需精确输入此关键词"/>
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="260"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="确认倒计时(秒)"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding ConfirmationCooldownSeconds, Mode=TwoWay}"
-                                      Minimum="0" Maximum="60"/>
-                    </Grid>
-                </StackPanel>
-            </ui:CardExpander>
-
-            <!-- 算法 -->
-            <ui:CardExpander Grid.Row="2" Margin="0,12,0,0" Icon="{ui:SymbolIcon Wand24}" IsExpanded="True"
-                             Header="算法">
-                <StackPanel>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="260"/>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="280"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock VerticalAlignment="Center" Text="默认算法"/>
                         <ComboBox Grid.Column="1" ItemsSource="{Binding Algorithms}"
                                   DisplayMemberPath="Name"
                                   SelectedItem="{Binding DefaultAlgorithm, Mode=TwoWay}"/>
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="260"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="SSD 默认算法"/>
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding Algorithms}"
-                                  DisplayMemberPath="Name"
-                                  SelectedItem="{Binding SsdDefaultAlgorithm, Mode=TwoWay}"/>
-                        <TextBlock Grid.Column="2" Margin="12,0,0,0" Foreground="Gray" VerticalAlignment="Center"
-                                   Text="留空则不为 SSD 切换算法"/>
+                        <ui:TextBlock Grid.Column="2" Margin="12,0,0,0" Appearance="Tertiary" VerticalAlignment="Center"
+                                      Text="普通文件直接粉碎；系统和高风险路径仍会被拦截或确认。"/>
                     </Grid>
                 </StackPanel>
             </ui:CardExpander>
 
-            <!-- Safety -->
-            <ui:CardExpander Grid.Row="3" Margin="0,12,0,0" Icon="{ui:SymbolIcon ShieldCheckmark24}" IsExpanded="True"
-                             Header="安全">
-                <StackPanel>
-                    <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding RejectReparsePoints, Mode=TwoWay}"
-                                     Content="拒绝跟随重解析点 (Junction / Symlink)"/>
-                    <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding ShredAlternateDataStreams, Mode=TwoWay}"
-                                     Content="同时擦除 NTFS 备用数据流 (ADS)"/>
-                    <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding DetectSolidStateDrives, Mode=TwoWay}"
-                                     Content="检测 SSD 并自动切换策略"/>
-                    <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding PreferTrimForSsd, Mode=TwoWay}"
-                                     Content="SSD 优先使用 TRIM 提示"/>
-                    <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding UseRestartManagerForLockedFiles, Mode=TwoWay}"
-                                     Content="文件被占用时尝试 Restart Manager"/>
-                    <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding AllowScheduleOnRebootDelete, Mode=TwoWay}"
-                                     Content="允许重启后删除作为最终回退"/>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="280"/>
-                            <ColumnDefinition Width="160"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="MFT 驻留膨胀阈值 (字节)"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding MftInflateThresholdBytes, Mode=TwoWay}"
-                                      Minimum="0" Maximum="65536"/>
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="280"/>
-                            <ColumnDefinition Width="160"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="MFT 驻留膨胀目标 (字节)"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding MftInflateTargetBytes, Mode=TwoWay}"
-                                      Minimum="0" Maximum="65536"/>
-                    </Grid>
-                </StackPanel>
-            </ui:CardExpander>
-
-            <!-- IO -->
-            <ui:CardExpander Grid.Row="4" Margin="0,12,0,0" Icon="{ui:SymbolIcon DataUsage24}"
-                             Header="IO">
-                <StackPanel>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="280"/>
-                            <ColumnDefinition Width="160"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="缓冲区大小 (字节)"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding IoBufferSizeBytes, Mode=TwoWay}"/>
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="280"/>
-                            <ColumnDefinition Width="160"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="最大并发文件数"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding MaxConcurrentFiles, Mode=TwoWay}"
-                                      Minimum="1" Maximum="32"/>
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="280"/>
-                            <ColumnDefinition Width="160"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="进度回调间隔 (毫秒)"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding ProgressReportIntervalMs, Mode=TwoWay}"
-                                      Minimum="10" Maximum="5000"/>
-                    </Grid>
-                    <ui:ToggleSwitch Margin="0,4" IsChecked="{Binding UseUnbufferedIo, Mode=TwoWay}"
-                                     Content="使用无缓冲 IO (FILE_FLAG_NO_BUFFERING)"/>
-                </StackPanel>
-            </ui:CardExpander>
-
-            <!-- FreeSpace -->
-            <ui:CardExpander Grid.Row="5" Margin="0,12,0,0" Icon="{ui:SymbolIcon Storage24}"
-                             Header="空闲空间">
-                <StackPanel>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="280"/>
-                            <ColumnDefinition Width="160"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="块大小 (字节)"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding FreeSpaceBlockSizeBytes, Mode=TwoWay}"/>
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="280"/>
-                            <ColumnDefinition Width="160"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="保留空闲缓冲 (字节)"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding FreeSpaceMinimumBufferBytes, Mode=TwoWay}"/>
-                    </Grid>
-                    <ui:ToggleSwitch Margin="0,4" IsChecked="{Binding FreeSpaceDisableOnSsd, Mode=TwoWay}"
-                                     Content="在 SSD 上禁用空闲空间擦除"/>
-                    <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding FreeSpaceFallbackToTrimOnSsd, Mode=TwoWay}"
-                                     Content="SSD 上退化为 TRIM"/>
-                </StackPanel>
-            </ui:CardExpander>
-
-            <!-- RecycleBin -->
-            <ui:CardExpander Grid.Row="6" Margin="0,12,0,0" Icon="{ui:SymbolIcon Delete24}"
-                             Header="回收站">
-                <StackPanel>
-                    <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding RecycleBinProcessAllDrives, Mode=TwoWay}"
-                                     Content="处理所有就绪固定盘的回收站"/>
-                    <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding RecycleBinOverwriteContents, Mode=TwoWay}"
-                                     Content="先粉碎数据再清空"/>
-                    <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding RecycleBinCallShellEmpty, Mode=TwoWay}"
-                                     Content="完成后调用 Shell32 SHEmptyRecycleBin"/>
-                </StackPanel>
-            </ui:CardExpander>
-
-            <!-- Paths -->
-            <ui:CardExpander Grid.Row="7" Margin="0,12,0,0" Icon="{ui:SymbolIcon Folder24}"
-                             Header="路径策略">
-                <StackPanel>
-                    <ui:TextBlock FontTypography="BodyStrong" Text="禁止粉碎 (Forbidden)"/>
-                    <ListBox MaxHeight="120" ItemsSource="{Binding ForbiddenPaths}" x:Name="ForbiddenList"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
-                        <ui:TextBox x:Name="ForbiddenInput" Width="360" PlaceholderText="新增禁止路径..."/>
-                        <ui:Button Content="添加" Margin="6,0,0,0" Click="OnAddForbidden"/>
-                        <ui:Button Content="移除选中" Margin="6,0,0,0" Click="OnRemoveForbidden"/>
-                    </StackPanel>
-
-                    <ui:TextBlock FontTypography="BodyStrong" Text="警告 (Warn)"/>
-                    <ListBox MaxHeight="120" ItemsSource="{Binding WarnPaths}" x:Name="WarnList"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
-                        <ui:TextBox x:Name="WarnInput" Width="360" PlaceholderText="新增警告路径..."/>
-                        <ui:Button Content="添加" Margin="6,0,0,0" Click="OnAddWarn"/>
-                        <ui:Button Content="移除选中" Margin="6,0,0,0" Click="OnRemoveWarn"/>
-                    </StackPanel>
-
-                    <ui:TextBlock FontTypography="BodyStrong" Text="放行 (Allow)"/>
-                    <ListBox MaxHeight="120" ItemsSource="{Binding AllowPaths}" x:Name="AllowList"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                        <ui:TextBox x:Name="AllowInput" Width="360" PlaceholderText="新增放行路径..."/>
-                        <ui:Button Content="添加" Margin="6,0,0,0" Click="OnAddAllow"/>
-                        <ui:Button Content="移除选中" Margin="6,0,0,0" Click="OnRemoveAllow"/>
-                    </StackPanel>
-                </StackPanel>
-            </ui:CardExpander>
-
-            <!-- Reporting -->
-            <ui:CardExpander Grid.Row="8" Margin="0,12,0,0" Icon="{ui:SymbolIcon DocumentBulletList24}"
+            <ui:CardExpander Grid.Row="2" Margin="0,12,0,0" Icon="{ui:SymbolIcon DocumentBulletList24}"
                              Header="审计报告">
                 <StackPanel>
                     <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding ReportingEnabled, Mode=TwoWay}"
-                                     Content="启用审计报告 (每批粉碎结束后自动生成)"/>
-                    <Grid Margin="0,4">
+                                     Content="生成粉碎报告"/>
+                    <Grid Margin="0,8,0,4">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="180"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="输出目录"/>
+                        <TextBlock VerticalAlignment="Center" Text="保存位置"/>
                         <ui:TextBox Grid.Column="1" Text="{Binding ReportingOutputDirectory, Mode=TwoWay}"
-                                    PlaceholderText="%LOCALAPPDATA%\Shredder\Reports"/>
+                                    IsReadOnly="True"
+                                    PlaceholderText="data\reports"/>
                     </Grid>
-                    <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding ReportingFormatJson, Mode=TwoWay}"
-                                     Content="生成 JSON 报告 (便于程序化分析)"/>
-                    <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding ReportingFormatHtml, Mode=TwoWay}"
-                                     Content="生成 HTML 报告 (便于人工查看)"/>
-                    <ui:ToggleSwitch Margin="0,2" IsChecked="{Binding ReportingAutoOpen, Mode=TwoWay}"
-                                     Content="生成后自动打开报告"/>
+                    <StackPanel Orientation="Horizontal" Margin="180,4,0,0">
+                        <ui:ToggleSwitch Margin="0,0,16,0" IsChecked="{Binding ReportingFormatJson, Mode=TwoWay}"
+                                         Content="JSON"/>
+                        <ui:ToggleSwitch IsChecked="{Binding ReportingFormatHtml, Mode=TwoWay}"
+                                         Content="HTML"/>
+                    </StackPanel>
                 </StackPanel>
             </ui:CardExpander>
 
-            <!-- ShellMenu (资源管理器右键菜单) -->
-            <ui:CardExpander Grid.Row="9" Margin="0,12,0,0" Icon="{ui:SymbolIcon AppFolder24}"
-                             Header="资源管理器右键菜单" IsExpanded="True">
+            <ui:CardExpander Grid.Row="3" Margin="0,12,0,0" Icon="{ui:SymbolIcon AppFolder24}"
+                             Header="右键菜单" IsExpanded="True">
                 <StackPanel>
                     <ui:TextBlock FontTypography="Body" Appearance="Tertiary"
-                                  Text="将「粉碎一切」加入文件 / 文件夹的右键菜单。仅写入 HKCU，无需管理员权限。"/>
-                    <Grid Margin="0,8,0,4">
+                                  Text="把「粉碎一切」加入文件和文件夹右键菜单。仅写入当前用户配置。"/>
+                    <Grid Margin="0,10,0,4">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="180"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="当前状态"/>
+                        <TextBlock VerticalAlignment="Center" Text="状态"/>
                         <ui:TextBlock Grid.Column="1" VerticalAlignment="Center"
                                       Text="{Binding ShellMenuStateLabel}"/>
                     </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="当前 App 路径"/>
-                        <ui:TextBlock Grid.Column="1" VerticalAlignment="Center" Appearance="Tertiary"
-                                      TextTrimming="CharacterEllipsis"
-                                      Text="{Binding ShellMenuCurrentExePath}"/>
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Text="已注册 exe"/>
-                        <ui:TextBlock Grid.Column="1" VerticalAlignment="Center" Appearance="Tertiary"
-                                      TextTrimming="CharacterEllipsis"
-                                      Text="{Binding ShellMenuInstalledExePath}"/>
-                    </Grid>
-                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                        <ui:Button Content="安装右键菜单" Appearance="Primary"
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <ui:Button Content="安装" Appearance="Primary"
                                    Icon="{ui:SymbolIcon Add24}" Click="OnInstallShellMenu"/>
-                        <ui:Button Content="卸载右键菜单" Margin="8,0,0,0"
+                        <ui:Button Content="卸载" Margin="8,0,0,0"
                                    Icon="{ui:SymbolIcon Delete24}" Click="OnUninstallShellMenu"/>
                         <ui:Button Content="刷新" Margin="8,0,0,0"
                                    Icon="{ui:SymbolIcon ArrowSync24}" Click="OnRefreshShellMenu"/>
@@ -316,16 +100,12 @@
                 </StackPanel>
             </ui:CardExpander>
 
-            <!-- 保存 -->
-            <StackPanel Grid.Row="10" Margin="0,20,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
+            <StackPanel Grid.Row="4" Margin="0,20,0,16" Orientation="Horizontal" HorizontalAlignment="Right">
                 <ui:TextBlock Margin="0,0,16,0" VerticalAlignment="Center" Appearance="Tertiary"
                               Text="{Binding SaveStatus}"/>
                 <ui:Button Content="保存" Appearance="Primary" Icon="{ui:SymbolIcon Save24}"
                            Click="OnSaveClick"/>
             </StackPanel>
-
-            <ui:TextBlock Grid.Row="11" Margin="0,16,0,16" Appearance="Tertiary"
-                          Text="提示：算法切换和并发数等高风险项变更后建议重启应用以确保子组件全部使用新配置。"/>
         </Grid>
     </ScrollViewer>
 </Page>

@@ -31,8 +31,8 @@ internal sealed class DefaultRecycleBinEnumerator : IRecycleBinEnumerator
             var binPath = Path.Combine(drive.RootDirectory.FullName, "$Recycle.Bin");
             if (!Directory.Exists(binPath)) continue;
 
-            // SafeEnumerateFiles 会把 ACL/损坏目录的异常吞掉,返回空集合而非中断
-            foreach (var file in SafeEnumerateFiles(binPath))
+            // SafeEnumerateFiles 会逐目录降级,单个 SID/损坏目录不可访问时不会中断整盘枚举。
+            foreach (var file in SafeEnumerateFiles(binPath, ct))
             {
                 ct.ThrowIfCancellationRequested();
                 yield return file;
@@ -40,14 +40,46 @@ internal sealed class DefaultRecycleBinEnumerator : IRecycleBinEnumerator
         }
     }
 
-    private static IEnumerable<string> SafeEnumerateFiles(string root)
+    private static IEnumerable<string> SafeEnumerateFiles(string root, CancellationToken ct)
+    {
+        foreach (var file in EnumerateFilesOnly(root))
+        {
+            ct.ThrowIfCancellationRequested();
+            yield return file;
+        }
+
+        foreach (var dir in EnumerateDirectoriesOnly(root))
+        {
+            ct.ThrowIfCancellationRequested();
+            foreach (var file in SafeEnumerateFiles(dir, ct))
+            {
+                ct.ThrowIfCancellationRequested();
+                yield return file;
+            }
+        }
+    }
+
+    private static string[] EnumerateFilesOnly(string root)
     {
         try
         {
-            return Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories);
+            return Directory.EnumerateFiles(root).ToArray();
         }
         catch (UnauthorizedAccessException) { return Array.Empty<string>(); }
         catch (DirectoryNotFoundException) { return Array.Empty<string>(); }
         catch (IOException) { return Array.Empty<string>(); }
+        catch (System.Security.SecurityException) { return Array.Empty<string>(); }
+    }
+
+    private static string[] EnumerateDirectoriesOnly(string root)
+    {
+        try
+        {
+            return Directory.EnumerateDirectories(root).ToArray();
+        }
+        catch (UnauthorizedAccessException) { return Array.Empty<string>(); }
+        catch (DirectoryNotFoundException) { return Array.Empty<string>(); }
+        catch (IOException) { return Array.Empty<string>(); }
+        catch (System.Security.SecurityException) { return Array.Empty<string>(); }
     }
 }

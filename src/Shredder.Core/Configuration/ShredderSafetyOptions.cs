@@ -9,7 +9,7 @@ public sealed class ShredderSafetyOptions
     /// <summary>禁止粉碎的路径(精确匹配或前缀匹配 + 大小写不敏感)。</summary>
     public List<string> ForbiddenPaths { get; set; } = [];
 
-    /// <summary>粉碎前需要弹高级警告确认的路径。</summary>
+    /// <summary>粉碎前需要弹出风险确认的路径。</summary>
     public List<string> WarnPaths { get; set; } = [];
 
     /// <summary>白名单(用户显式允许的高风险路径)。</summary>

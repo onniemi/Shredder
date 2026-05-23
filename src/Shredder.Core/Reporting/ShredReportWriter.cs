@@ -88,9 +88,7 @@ public sealed class ShredReportWriter : IShredReportWriter
 
     private static string ResolveDirectory(string raw)
     {
-        var expanded = Environment.ExpandEnvironmentVariables(
-            string.IsNullOrWhiteSpace(raw) ? "%LOCALAPPDATA%\\Shredder\\Reports" : raw);
-        return Path.GetFullPath(expanded);
+        return ShredderAppPaths.ResolveDirectory(raw, Path.Combine("data", "reports"));
     }
 
     [SuppressMessage("Design", "CA1031:DoNotCatchGeneralExceptionTypes",

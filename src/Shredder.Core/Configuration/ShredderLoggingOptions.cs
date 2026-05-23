@@ -15,9 +15,9 @@ public sealed class ShredderLoggingOptions
 
     /// <summary>
     /// 日志输出目录,支持 <c>%LOCALAPPDATA%</c> 等环境变量。
-    /// 留空时默认 <c>%LOCALAPPDATA%\Shredder\Logs</c>。
+    /// 留空时默认 <c>程序目录\data\logs</c>。
     /// </summary>
-    public string OutputDirectory { get; set; } = "%LOCALAPPDATA%\\Shredder\\Logs";
+    public string OutputDirectory { get; set; } = "data\\logs";
 
     /// <summary>单个日志文件大小上限(字节),超过后滚动到新文件。默认 10 MiB。</summary>
     public long FileSizeLimitBytes { get; set; } = 10L * 1024 * 1024;

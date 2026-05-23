@@ -4,29 +4,39 @@
 
 Windows 平台的安全文件粉碎工具 · C# / .NET 10 / WPF
 
-> ⚠️ 本工具的操作**不可逆**。生产使用前请务必备份重要数据，并在测试目录验证行为。
+> ⚠️ 本工具的操作**不可逆**。正式使用前请务必备份重要数据，并在测试目录验证行为。
+
+## 下载哪个版本
+
+GitHub Release 同时提供简约版、完整版和轻量版，用户可以按自己的环境选择：
+
+| 文件 | 适合谁 | 说明 |
+|---|---|---|
+| `shredder-app-*-win-x64-simple.zip` | 只想要最简单界面的用户 | WPF 简约界面，只显示文件/文件夹粉碎，自带 .NET 10 桌面运行时 |
+| `shredder-app-*-win-x64-full.zip` | 想保留完整图形界面的用户 | WPF 完整界面，内置 .NET 10 桌面运行时，体积较大 |
+| `shredder-app-*-win-x64-light.zip` | 已安装 .NET 10 Desktop Runtime 的用户 | WPF 完整界面，体积小，需要本机已有运行时 |
+| `shredder-cli-*-win-x64-full.zip` | 脚本/服务器/远程环境 | 命令行版，内置 .NET 10 运行时 |
+| `shredder-cli-*-win-x64-light.zip` | 已安装 .NET 10 Runtime 的脚本用户 | 命令行版，体积小，需要本机已有运行时 |
+
+拿不准就下载 `app simple`。想要完整界面就下载 `app full`;想要最小体积，并且已经安装运行时，就下载 `light`。
 
 ## 功能
 
 - ✅ 文件 / 文件夹 递归粉碎
 - ✅ 多算法：单次随机、DoD 5220.22-M (3/7 Pass)、零填充 + 文件名随机化
-- ✅ 资源管理器右键菜单集成（HKCU,无需管理员）
-- ✅ 一键彻底清空回收站
-- ✅ 驱动器空闲空间擦除
-- ✅ 拖拽 + 二次确认 + 实时进度
+- ✅ 拖拽 + 高风险路径确认 + 实时进度
 - ✅ 命令行版本 `shredder.exe`(脚本 / CI / 远程会话友好)
 
 ## 目录结构
 
 ```
 粉碎一切文件夹/
-├── docs/设计文档.md
 ├── src/
 │   ├── Shredder.sln
 │   ├── Shredder.App/          # WPF 入口 (.NET 10)
 │   ├── Shredder.Cli/          # 命令行入口 shredder.exe
 │   ├── Shredder.Core/         # 算法 + 服务
-│   ├── Shredder.Integration/  # 资源管理器右键集成
+│   ├── Shredder.Integration/  # 右键菜单集成 API
 │   └── Shredder.Tests/        # xUnit 单元测试
 └── README.md
 ```
@@ -47,19 +57,19 @@ dotnet test  Shredder.Tests
 ## 命令行版本 (shredder.exe)
 
 GUI 之外的等价入口,适合脚本、定时任务、远程 SSH/RDP 会话。共享同一份 `Shredder.Core` 服务,
-所以**全部安全护栏**(系统目录黑名单、二次确认、SSD 默认 CryptoErase 等)都在 CLI 下同样生效。
+所以**全部安全护栏**(系统目录黑名单、高风险路径确认、SSD 默认 CryptoErase 等)都在 CLI 下同样生效。
 
 ```powershell
 # 粉碎单个文件(默认按盘类型选算法:SSD→CryptoErase,HDD→Purge-3Pass)
 shredder C:\path\to\secret.docx
 
-# 多目标 + 指定算法 + 跳过 -y 二次确认
+# 多目标 + 指定算法
 shredder D:\dir1 D:\dir2 --algo dod7 -y
 
-# 清空回收站(含粉碎覆写)
+# 清空回收站(CLI 可选命令,含粉碎覆写)
 shredder --empty-recycle -y
 
-# 擦除盘符空闲空间
+# 擦除盘符空闲空间(CLI 可选命令)
 shredder --free-space D:\ -y
 
 # 帮助 / 版本
@@ -86,25 +96,17 @@ shredder --version
 | 0 | 成功 |
 | 1 | 用法错误 / 路径不存在 / 通用失败 |
 | 2 | 命中安全黑名单 (Forbidden) — `-y` **不能跳过** |
-| 3 | 用户拒绝二次确认 |
+| 3 | 用户拒绝高风险路径确认 |
 | 4 | 多目标下部分失败 |
 | 5 | 收到 Ctrl-C,操作中止 |
 
 ### 安全不变量(CLI 与 GUI 一致)
 
-- `-y / --yes` 只能跳过 `Warn` 级别的二次确认,**无法**绕过 `Forbidden`(系统目录、盘符根)。
-- 终端二次确认必须输入关键字「粉碎」(可在 `appsettings.json` 的 `Shredder:Ui:ConfirmationKeyword` 改);
+- 普通文件 / 目录会直接执行;只有命中 `Warn` 级别的高风险路径才需要确认。
+- `-y / --yes` 只能跳过 `Warn` 级别的确认,**无法**绕过 `Forbidden`(系统目录、盘符根)。
+- 终端确认必须输入关键字「粉碎」(可在 `appsettings.json` 的 `Shredder:Ui:ConfirmationKeyword` 改);
   按回车或其它任何输入都视为取消。
 - 日志默认把路径脱敏成 SHA-256 短哈希,通过 `Shredder:Logging:RecordRawPaths=true` 才会记录原始路径。
-
-## 安装右键菜单
-
-GUI 中打开 **设置 → 资源管理器右键菜单**，即可一键 **安装 / 卸载 / 刷新**，
-状态栏会显示当前注册路径与实际 exe 是否一致。注册写入 `HKCU`，**不需要管理员权限**，
-卸载会清理同一键。
-
-如果需要在命令行/部署脚本中调用，对应 API 是 `Shredder.Integration.ShellMenuInstaller`
-的 `Install` / `Uninstall` / `IsInstalled` / `GetInstalledExePath`。
 
 ## 算法对照
 
@@ -121,26 +123,9 @@ GUI 中打开 **设置 → 资源管理器右键菜单**，即可一键 **安装
 - **云盘/网络盘**：本工具仅处理本地视图，云端副本不在保护范围内。
 - **系统目录**：`%WINDIR%`、`Program Files`、驱动器根目录被硬编码禁止粉碎。
 
-## 路线图
-
-- [ ] MSIX 安装包
-- [x] 命令行版本 `shredder.exe --algo dod7 <path>`
-- [x] Serilog 操作日志 (路径默认脱敏为 SHA-256 短哈希,可通过 `Shredder:Logging:RecordRawPaths` 开关)
-- [ ] 国际化 (i18n)
-- [ ] SSD ATA Secure Erase 支持
-
-## 基准 / 性能
-
-仓库内置 [BenchmarkDotNet](https://benchmarkdotnet.org/) 工程 `src/Shredder.Benchmarks`，
-覆盖单文件覆写算法对比和目录并发对比；复现方法、注意事项与结果模板见
-[`docs/benchmarks/`](docs/benchmarks/README.md)。
-
-注：本仓库不发布"比 XX 软件快多少"之类的横向比较结论。benchmark 仅用于在本机
-横向对比本仓库内不同算法 / 不同配置，便于发现算法回归。
-
 ## 测试
 
-`Shredder.Tests` 当前 **169 个单元 / 集成测试**全部通过，包含算法、配置注入、目录并发、
+`Shredder.Tests` 当前 **178 个单元 / 集成测试**全部通过，包含算法、配置注入、目录并发、
 FreeSpace SSD 策略、回收站结构化结果、文件系统边界（ADS / Junction / 只读 / 占用文件）、
 CLI E2E 与 publish smoke 等场景。本地复现：
 

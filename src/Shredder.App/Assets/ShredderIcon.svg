@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Shredder app icon">
+  <defs>
+    <linearGradient id="bg" x1="38" y1="28" x2="214" y2="228" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#24262b"/>
+      <stop offset="1" stop-color="#111316"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="80" y1="46" x2="176" y2="206" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffc44d"/>
+      <stop offset="0.58" stop-color="#ff9f0a"/>
+      <stop offset="1" stop-color="#e17900"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="224" height="224" rx="48" fill="url(#bg)"/>
+  <rect x="24" y="24" width="208" height="208" rx="40" fill="none" stroke="#ffb020" stroke-width="8"/>
+  <path d="M128 42 184 64v50c0 41-22 75-56 98-34-23-56-57-56-98V64l56-22Z" fill="url(#shield)"/>
+  <path d="M128 54 172 72v40c0 32-16 58-44 79-28-21-44-47-44-79V72l44-18Z" fill="none" stroke="#ffd987" stroke-width="5" opacity=".75"/>
+  <path d="M91 103 156 78" stroke="#241a0d" stroke-width="12" stroke-linecap="round" opacity=".88"/>
+  <path d="M87 137 175 103" stroke="#241a0d" stroke-width="12" stroke-linecap="round" opacity=".88"/>
+  <path d="M95 171 164 144" stroke="#241a0d" stroke-width="12" stroke-linecap="round" opacity=".88"/>
+  <path d="M104 184v24M128 194v24M152 184v24" stroke="#ffb020" stroke-width="10" stroke-linecap="round"/>
+  <path d="M72 66c12-15 31-25 56-32 25 7 44 17 56 32" fill="none" stroke="#fff0bf" stroke-width="6" stroke-linecap="round" opacity=".32"/>
+</svg>

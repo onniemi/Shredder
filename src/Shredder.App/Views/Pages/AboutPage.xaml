@@ -21,7 +21,7 @@
                 <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                     <ui:TextBlock FontTypography="Title" Text="{Binding AppName}"/>
                     <ui:TextBlock FontTypography="Body" Appearance="Tertiary"
-                                  Text="专业级 Windows 安全粉碎工具"/>
+                                  Text="Windows 安全文件粉碎工具"/>
                 </StackPanel>
             </StackPanel>
 
@@ -113,7 +113,7 @@
                                   Text="一键采集当前环境、卷与脱敏后的配置,打成 zip 用于排错(不含任何用户文件内容)。"/>
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                         <ui:Button Content="导出诊断包" Icon="{ui:SymbolIcon Save24}" Appearance="Primary"
-                                   IsEnabled="{Binding IsExportingDiagnostics, Converter={StaticResource InverseBoolConverter}, FallbackValue=True}"
+                                   IsEnabled="{Binding IsExportingDiagnostics, Converter={StaticResource InverseBool}, FallbackValue=True}"
                                    Click="OnExportDiagnosticsClick"/>
                         <ui:Button Margin="8,0,0,0" Content="打开诊断目录" Icon="{ui:SymbolIcon FolderOpen24}"
                                    Click="OnOpenDiagnosticsFolderClick"/>

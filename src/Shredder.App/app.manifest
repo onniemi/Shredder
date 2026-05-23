@@ -4,7 +4,7 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- 默认普通用户。需要管理员权限的操作（空闲空间擦除、TRIM 等）由独立子进程触发 UAC -->
+        <!-- 普通权限启动，避免管理员窗口被 Windows 拦截普通资源管理器拖拽。 -->
         <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>

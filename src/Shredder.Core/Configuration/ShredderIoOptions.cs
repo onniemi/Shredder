@@ -10,8 +10,7 @@ public sealed class ShredderIoOptions
     /// 是否使用 <c>FILE_FLAG_NO_BUFFERING</c> 直写(绕过 OS 缓存,要求扇区对齐)。
     /// <para>
     /// 配置项保留以维持向后兼容,**当前版本暂未实装**。原因:Windows 无缓冲 I/O 需要按物理扇区
-    /// 对齐缓冲区地址与写入长度,出错代价高。计划在后续版本接入,详见
-    /// <c>docs/ClaudeCode_剩余工作交接.md §4.1</c>("不要半实现")。
+    /// 对齐缓冲区地址与写入长度,出错代价高。该选项会在后续版本完整接入。
     /// </para>
     /// </summary>
     public bool UseUnbufferedIo { get; set; } = true;

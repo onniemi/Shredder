@@ -6,6 +6,7 @@ using Microsoft.Win32;
 using Shredder.App.ViewModels;
 using Shredder.Core.Configuration;
 using Shredder.Core.Models;
+using Shredder.Core.Security;
 
 namespace Shredder.App.Views.Pages;
 
@@ -16,13 +17,16 @@ public partial class ShredPage : Page
 {
     private readonly ShredPageViewModel _vm;
     private readonly IOptions<ShredderOptions> _options;
+    private readonly PathSafetyGuard _guard;
 
-    public ShredPage(ShredPageViewModel vm, IOptions<ShredderOptions> options)
+    public ShredPage(ShredPageViewModel vm, IOptions<ShredderOptions> options, PathSafetyGuard guard)
     {
         ArgumentNullException.ThrowIfNull(vm);
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(guard);
         _vm = vm;
         _options = options;
+        _guard = guard;
         InitializeComponent();
         DataContext = _vm;
     }
@@ -41,7 +45,17 @@ public partial class ShredPage : Page
         ArgumentNullException.ThrowIfNull(e);
         if (e.Data.GetData(DataFormats.FileDrop) is string[] paths)
         {
-            foreach (var p in paths) _vm.AddPath(p);
+            AddPaths(paths);
+        }
+    }
+
+    public void AddPathFromShellDrop(string path) => _vm.AddPath(path);
+
+    private void AddPaths(IEnumerable<string> paths)
+    {
+        foreach (var path in paths)
+        {
+            _vm.AddPath(path);
         }
     }
 
@@ -63,8 +77,6 @@ public partial class ShredPage : Page
         }
     }
 
-    private void OnClearClick(object sender, RoutedEventArgs e) => _vm.Clear();
-
     private async void OnStartClick(object sender, RoutedEventArgs e)
     {
         var pending = _vm.Jobs
@@ -77,14 +89,48 @@ public partial class ShredPage : Page
             return;
         }
 
-        var dlg = new ConfirmShredDialog(_options, pending) { Owner = Window.GetWindow(this) };
-        if (dlg.ShowDialog() != true) return;
+        var warnings = new List<string>();
+        foreach (var path in pending)
+        {
+            var decision = _guard.Evaluate(path);
+            if (decision.Level == PathSafetyGuard.PathSafetyLevel.Forbidden)
+            {
+                MessageBox.Show(
+                    $"{path}\n\n{decision.Reason}",
+                    "已阻止高风险目标",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            if (decision.Level == PathSafetyGuard.PathSafetyLevel.Warn)
+            {
+                warnings.Add($"{path}\n{decision.Reason}");
+            }
+        }
+
+        if (warnings.Count > 0)
+        {
+            var dlg = new ConfirmShredDialog(_options, warnings) { Owner = Window.GetWindow(this) };
+            if (dlg.ShowDialog() != true) return;
+        }
+
         await _vm.RunAsync();
     }
 
-    private void OnCancelClick(object sender, RoutedEventArgs e) => _vm.Cancel();
+    private void OnRemoveJobClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ShredJobRow row })
+        {
+            _vm.Remove(row);
+        }
+    }
 
-    private void OnOpenLastReportClick(object sender, RoutedEventArgs e) => _vm.OpenLastReport();
+    private void OnOpenLastReportClick(object sender, RoutedEventArgs e) => _vm.ShowHistory();
 
-    private void OnOpenReportsFolderClick(object sender, RoutedEventArgs e) => _vm.OpenReportsFolder();
+    private void OnBackFromHistoryClick(object sender, RoutedEventArgs e) => _vm.HideHistory();
+
+    private void OnClearHistoryClick(object sender, RoutedEventArgs e) => _vm.ClearHistory();
+
+    private void OnRefreshHistoryClick(object sender, RoutedEventArgs e) => _vm.RefreshHistory();
 }
