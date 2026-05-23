@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Serilog;
+using Serilog.Events;
 using Shredder.Core.Configuration;
 using Shredder.Core.Diagnostics;
 
@@ -35,8 +36,12 @@ internal static class SerilogSetup
         var loggingOpts = sp.GetRequiredService<IOptions<ShredderOptions>>().Value.Logging;
         var enricher = sp.GetRequiredService<PathRedactingEnricher>();
 
-        lc.ReadFrom.Configuration(configuration)
-          .Enrich.FromLogContext()
+        ApplyConfiguredMinimumLevel(configuration, lc);
+
+        lc.Enrich.FromLogContext()
+          .Enrich.WithMachineName()
+          .Enrich.WithProcessId()
+          .Enrich.WithThreadId()
           .Enrich.With(enricher);
 
         if (!loggingOpts.FileSinkEnabled) return;
@@ -65,5 +70,28 @@ internal static class SerilogSetup
         {
             // 文件 sink 初始化失败:Console sink 仍可工作,不阻挡 CLI 启动
         }
+    }
+
+    private static void ApplyConfiguredMinimumLevel(IConfiguration configuration, LoggerConfiguration lc)
+    {
+        var section = configuration.GetSection("Serilog:MinimumLevel");
+        lc.MinimumLevel.Is(ParseLogEventLevel(section["Default"]) ?? LogEventLevel.Information);
+
+        foreach (var item in section.GetSection("Override").GetChildren())
+        {
+            if (string.IsNullOrWhiteSpace(item.Key)) continue;
+            var level = ParseLogEventLevel(item.Value);
+            if (level is not null)
+            {
+                lc.MinimumLevel.Override(item.Key, level.Value);
+            }
+        }
+    }
+
+    private static LogEventLevel? ParseLogEventLevel(string? value)
+    {
+        return Enum.TryParse<LogEventLevel>(value, ignoreCase: true, out var level)
+            ? level
+            : null;
     }
 }

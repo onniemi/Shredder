@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Serilog;
+using Serilog.Events;
 using Shredder.App.ViewModels;
 using Shredder.App.Views;
 using Shredder.App.Views.Pages;
@@ -111,9 +112,8 @@ public partial class App : Application
 
     /// <summary>
     /// 配置 Serilog 流水线:Debug + 滚动文件 + 路径脱敏富化器。
-    /// <see cref="Serilog.LoggerConfiguration.ReadFrom"/> 从 appsettings 的 <c>Serilog</c> 节读取 MinimumLevel/Override/Enrich。
-    /// 文件 sink 的路径在代码里展开环境变量(<c>Serilog.Settings.Configuration</c> 不会替我们做),
-    /// 因此 appsettings 里只放最小级别与"非物理"开关。
+    /// 日志级别从 appsettings 的 <c>Serilog:MinimumLevel</c> 节读取,sink/enricher 用代码显式配置,
+    /// 避免 single-file 发布时依赖程序集扫描。
     /// </summary>
     [SuppressMessage("Design", "CA1031:DoNotCatchGeneralExceptionTypes",
         Justification = "日志初始化失败必须降级:即使目录创建失败也要让 Debug/Console sink 继续工作,否则用户连排错日志都看不到。")]
@@ -125,8 +125,12 @@ public partial class App : Application
         var loggingOpts = sp.GetRequiredService<IOptions<ShredderOptions>>().Value.Logging;
         var enricher = sp.GetRequiredService<PathRedactingEnricher>();
 
-        lc.ReadFrom.Configuration(configuration)
-          .Enrich.FromLogContext()
+        ApplyConfiguredMinimumLevel(configuration, lc);
+
+        lc.Enrich.FromLogContext()
+          .Enrich.WithMachineName()
+          .Enrich.WithProcessId()
+          .Enrich.WithThreadId()
           .Enrich.With(enricher)
           .WriteTo.Debug(outputTemplate: outputTemplate);
 
@@ -161,6 +165,29 @@ public partial class App : Application
             // 文件 sink 初始化失败(权限不足、磁盘满、路径非法等)时静默降级,
             // Debug/Console sink 仍然可用,不影响应用启动。
         }
+    }
+
+    private static void ApplyConfiguredMinimumLevel(IConfiguration configuration, LoggerConfiguration lc)
+    {
+        var section = configuration.GetSection("Serilog:MinimumLevel");
+        lc.MinimumLevel.Is(ParseLogEventLevel(section["Default"]) ?? LogEventLevel.Information);
+
+        foreach (var item in section.GetSection("Override").GetChildren())
+        {
+            if (string.IsNullOrWhiteSpace(item.Key)) continue;
+            var level = ParseLogEventLevel(item.Value);
+            if (level is not null)
+            {
+                lc.MinimumLevel.Override(item.Key, level.Value);
+            }
+        }
+    }
+
+    private static LogEventLevel? ParseLogEventLevel(string? value)
+    {
+        return Enum.TryParse<LogEventLevel>(value, ignoreCase: true, out var level)
+            ? level
+            : null;
     }
 
     [SuppressMessage("Design", "CA1031:DoNotCatchGeneralExceptionTypes",

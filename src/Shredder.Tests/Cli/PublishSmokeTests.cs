@@ -111,6 +111,95 @@ public class PublishSmokeTests
         }
     }
 
+    [Fact]
+    public async Task Cli_SingleFilePublish_RunsHelpAndDryRun()
+    {
+        if (!TryLocateRepo(out var repoRoot, out _)) return;
+        if (!HasDotnetCli()) return;
+
+        var cliProj = Path.Combine(repoRoot, "Shredder.Cli", "Shredder.Cli.csproj");
+        if (!File.Exists(cliProj)) return;
+
+        var publishDir = MakeTempPublishDir("cli-singlefile");
+        try
+        {
+            var publish = await RunDotnetAsync(repoRoot, new[]
+            {
+                "publish", cliProj,
+                "-c", "Release",
+                "-r", "win-x64",
+                "--self-contained", "true",
+                "-p:PublishSingleFile=true",
+                "-p:IncludeNativeLibrariesForSelfExtract=true",
+                "-o", publishDir,
+                "--nologo",
+                "--verbosity", "minimal",
+            }, PublishTimeoutMs);
+
+            Assert.True(
+                publish.ExitCode == 0,
+                $"dotnet publish (CLI single-file) failed exit={publish.ExitCode}\n--- stdout ---\n{publish.StdOut}\n--- stderr ---\n{publish.StdErr}");
+
+            var exe = Path.Combine(publishDir, "shredder.exe");
+            Assert.True(File.Exists(exe), $"single-file publish should contain shredder.exe, actual:{ListDir(publishDir)}");
+
+            var help = await RunChildAsync(exe, new[] { "--help" }, timeoutMs: 30_000);
+            Assert.Equal(0, help.ExitCode);
+            Assert.DoesNotContain("No Serilog", help.StdOut + help.StdErr);
+
+            var sample = Path.Combine(publishDir, "sample.txt");
+            await File.WriteAllTextAsync(sample, "temporary publish smoke content");
+            var dryRun = await RunChildAsync(exe, new[] { sample, "--dry-run", "--algo", "single", "--quiet" }, timeoutMs: 30_000);
+            Assert.Equal(0, dryRun.ExitCode);
+            Assert.True(File.Exists(sample), "--dry-run must not delete the target file.");
+            Assert.DoesNotContain("No Serilog", dryRun.StdOut + dryRun.StdErr);
+        }
+        finally
+        {
+            SafeDelete(publishDir);
+        }
+    }
+
+    [Fact]
+    public async Task App_SingleFilePublish_ProducesRunnableExeAndAppsettings()
+    {
+        if (!TryLocateRepo(out var repoRoot, out _)) return;
+        if (!HasDotnetCli()) return;
+
+        var appProj = Path.Combine(repoRoot, "Shredder.App", "Shredder.App.csproj");
+        if (!File.Exists(appProj)) return;
+
+        var publishDir = MakeTempPublishDir("app-singlefile");
+        try
+        {
+            var publish = await RunDotnetAsync(repoRoot, new[]
+            {
+                "publish", appProj,
+                "-c", "Release",
+                "-r", "win-x64",
+                "--self-contained", "true",
+                "-p:PublishSingleFile=true",
+                "-p:IncludeNativeLibrariesForSelfExtract=true",
+                "-o", publishDir,
+                "--nologo",
+                "--verbosity", "minimal",
+            }, PublishTimeoutMs);
+
+            Assert.True(
+                publish.ExitCode == 0,
+                $"dotnet publish (App single-file) failed exit={publish.ExitCode}\n--- stdout ---\n{publish.StdOut}\n--- stderr ---\n{publish.StdErr}");
+
+            Assert.True(File.Exists(Path.Combine(publishDir, "Shredder.exe")),
+                $"single-file publish should contain Shredder.exe, actual:{ListDir(publishDir)}");
+            Assert.True(File.Exists(Path.Combine(publishDir, "appsettings.json")),
+                "single-file WPF publish should include appsettings.json.");
+        }
+        finally
+        {
+            SafeDelete(publishDir);
+        }
+    }
+
     // ---------- helpers ----------
 
     /// <summary>

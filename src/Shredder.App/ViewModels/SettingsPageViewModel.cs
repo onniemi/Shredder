@@ -312,7 +312,6 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         var p = Environment.ProcessPath;
         if (!string.IsNullOrWhiteSpace(p)) return p;
 
-        var asm = System.Reflection.Assembly.GetEntryAssembly()?.Location;
-        return asm ?? string.Empty;
+        return string.Empty;
     }
 }
