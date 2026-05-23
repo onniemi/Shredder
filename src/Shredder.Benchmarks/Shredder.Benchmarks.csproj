@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Shredder.Benchmarks</RootNamespace>
+    <IsPackable>false</IsPackable>
+
+    <!-- BenchmarkDotNet 强制要求 Release + 优化打开,Debug 跑会直接报错 -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+
+    <!--
+      显式标记为非测试项目,确保不会被 dotnet test 误识别。
+      benchmark 默认不进 CI,只能用 dotnet run 在 Release 模式下手动跑。
+    -->
+    <IsTestProject>false</IsTestProject>
+
+    <!--
+      benchmark 工程不参与正式发布的严格静态检查:
+      BenchmarkDotNet 生成的代码、临时文件路径处理、Console 输出等会触发大量分析器规则,
+      与 benchmark 本身的"实验性、本地一次性脚本"定位不匹配。
+    -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CA1707;CA1822;CA2007;CA1062;CA1861;CA1812;CA1819;CA5394;CA1031;CA1303;CA1305;CA1859</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shredder.Core\Shredder.Core.csproj" />
+  </ItemGroup>
+
+</Project>

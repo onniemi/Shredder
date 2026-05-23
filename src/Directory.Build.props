@@ -1,0 +1,54 @@
+<Project>
+
+  <!-- 全解决方案共用编译/分析基线。所有 csproj 自动继承。 -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- 严格编译:警告即错误,确保 CI 干净 -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <WarningsNotAsErrors>NU1701;CA1416</WarningsNotAsErrors>
+
+    <!-- 启用最新代码分析器(Recommended 是专业级基线;AllEnabledByDefault 会启用大量噪声规则) -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- 抑制不适用于桌面应用规模的"噪声"规则:
+         CA1848/CA1727 LoggerMessage 委托/小写日志键: 对小日志量桌面应用过度优化
+         CA1873         日志参数惰性求值警告: 桌面应用日志量小,可读性优先
+         CA1305         IFormatProvider: $""插值用户不可见日志足够,生硬全局加 CultureInfo.InvariantCulture 会损害可读性
+         CA1303         本地化:Roadmap 项,后续上 i18n
+         CA1031         捕获基类 Exception:服务边界&UI 命令需要广捕+日志,逐处用 [SuppressMessage] 标注理由 -->
+    <NoWarn>$(NoWarn);CA1848;CA1727;CA1873;CA1305;CA1303</NoWarn>
+
+    <!-- 可重现构建 + 调试体验 -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <DebugType>portable</DebugType>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+
+    <!-- 产品元信息(可被 CI 覆盖) -->
+    <Company>Shredder Project</Company>
+    <Product>粉碎一切 (Shredder)</Product>
+    <Copyright>Copyright (c) Shredder Project Contributors. Licensed under MIT.</Copyright>
+    <Version>0.2.0</Version>
+    <AssemblyVersion>0.2.0.0</AssemblyVersion>
+    <FileVersion>0.2.0.0</FileVersion>
+
+    <!-- 平台 -->
+    <Platforms>AnyCPU;x64</Platforms>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+
+  <!-- 测试项目放宽:测试中的警告不应阻断构建 -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CA1707;CA1822;CA2007;CA1062;CA1861</NoWarn>
+  </PropertyGroup>
+
+</Project>

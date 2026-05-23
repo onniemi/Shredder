@@ -1,0 +1,145 @@
+<Page x:Class="Shredder.App.Views.Pages.AboutPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      Title="关于">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 标题 -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                <ui:SymbolIcon Symbol="DeleteDismiss24" FontSize="36" VerticalAlignment="Center"/>
+                <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <ui:TextBlock FontTypography="Title" Text="{Binding AppName}"/>
+                    <ui:TextBlock FontTypography="Body" Appearance="Tertiary"
+                                  Text="专业级 Windows 安全粉碎工具"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- 版本卡 -->
+            <ui:CardExpander Grid.Row="1" Margin="0,16,0,0" Icon="{ui:SymbolIcon Info24}" IsExpanded="True"
+                             Header="版本信息">
+                <Grid Margin="0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,4" Text="版本"/>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="1" Margin="0,4" Appearance="Primary"
+                                  Text="{Binding Version}"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,4" Text="构建配置"/>
+                    <ui:TextBlock Grid.Row="1" Grid.Column="1" Margin="0,4"
+                                  Text="{Binding BuildConfiguration}"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,4" Text="运行时"/>
+                    <ui:TextBlock Grid.Row="2" Grid.Column="1" Margin="0,4"
+                                  Text="{Binding RuntimeVersion}"/>
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,4" Text="操作系统"/>
+                    <ui:TextBlock Grid.Row="3" Grid.Column="1" Margin="0,4"
+                                  Text="{Binding OsVersion}"/>
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,4" Text="版权"/>
+                    <ui:TextBlock Grid.Row="4" Grid.Column="1" Margin="0,4" Appearance="Tertiary"
+                                  Text="{Binding Copyright}"/>
+                </Grid>
+            </ui:CardExpander>
+
+            <!-- 项目与许可 -->
+            <ui:CardExpander Grid.Row="2" Margin="0,12,0,0" Icon="{ui:SymbolIcon Document24}" IsExpanded="True"
+                             Header="项目 / 许可">
+                <StackPanel>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="许可证"/>
+                        <ui:TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{Binding License}"/>
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="项目主页"/>
+                        <ui:TextBlock Grid.Column="1" VerticalAlignment="Center" Appearance="Tertiary"
+                                      Text="{Binding Repository}"/>
+                        <ui:Button Grid.Column="2" Content="打开" Icon="{ui:SymbolIcon Open24}"
+                                   Margin="8,0,0,0" Click="OnOpenRepoClick"/>
+                    </Grid>
+                </StackPanel>
+            </ui:CardExpander>
+
+            <!-- 第三方组件 -->
+            <ui:CardExpander Grid.Row="3" Margin="0,12,0,0" Icon="{ui:SymbolIcon Box24}" IsExpanded="True"
+                             Header="第三方组件 (Third-Party Notices)">
+                <ListView ItemsSource="{Binding ThirdPartyNotices}" BorderThickness="0">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="组件" Width="240" DisplayMemberBinding="{Binding Name}"/>
+                            <GridViewColumn Header="许可" Width="120" DisplayMemberBinding="{Binding License}"/>
+                            <GridViewColumn Header="链接" Width="500" DisplayMemberBinding="{Binding Url}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </ui:CardExpander>
+
+            <!-- 诊断 -->
+            <ui:CardExpander Grid.Row="4" Margin="0,12,0,0" Icon="{ui:SymbolIcon Bug24}" IsExpanded="True"
+                             Header="诊断 / 排错">
+                <StackPanel>
+                    <ui:TextBlock FontTypography="Body" Appearance="Tertiary" TextWrapping="Wrap"
+                                  Text="一键采集当前环境、卷与脱敏后的配置,打成 zip 用于排错(不含任何用户文件内容)。"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <ui:Button Content="导出诊断包" Icon="{ui:SymbolIcon Save24}" Appearance="Primary"
+                                   IsEnabled="{Binding IsExportingDiagnostics, Converter={StaticResource InverseBoolConverter}, FallbackValue=True}"
+                                   Click="OnExportDiagnosticsClick"/>
+                        <ui:Button Margin="8,0,0,0" Content="打开诊断目录" Icon="{ui:SymbolIcon FolderOpen24}"
+                                   Click="OnOpenDiagnosticsFolderClick"/>
+                        <ui:Button Margin="8,0,0,0" Content="打开日志目录" Icon="{ui:SymbolIcon DocumentText24}"
+                                   Click="OnOpenLogsFolderClick"/>
+                        <ui:Button Margin="8,0,0,0" Content="打开最近诊断包" Icon="{ui:SymbolIcon Open24}"
+                                   Click="OnOpenLastDiagnosticsClick"/>
+                    </StackPanel>
+                    <ui:TextBlock Margin="0,8,0,0" FontTypography="Body" Appearance="Tertiary" TextWrapping="Wrap"
+                                  Text="{Binding DiagnosticsStatus}"/>
+                </StackPanel>
+            </ui:CardExpander>
+
+            <!-- 安全声明 -->
+            <ui:CardExpander Grid.Row="5" Margin="0,12,0,0" Icon="{ui:SymbolIcon ShieldCheckmark24}"
+                             Header="安全声明" IsExpanded="True">
+                <StackPanel>
+                    <ui:TextBlock FontTypography="Body" TextWrapping="Wrap"
+                                  Text="本程序的擦除操作不可恢复。请在执行前再次确认目标路径与算法。"/>
+                    <ui:TextBlock Margin="0,8,0,0" FontTypography="Body" Appearance="Tertiary" TextWrapping="Wrap"
+                                  Text="作者不对数据丢失承担责任。本程序按「原样」提供,详见 LICENSE。"/>
+                </StackPanel>
+            </ui:CardExpander>
+
+            <ui:TextBlock Grid.Row="6" Margin="0,16,0,16" Appearance="Tertiary"
+                          Text="如发现问题或建议改进算法,请通过项目主页提交 Issue。"/>
+        </Grid>
+    </ScrollViewer>
+</Page>

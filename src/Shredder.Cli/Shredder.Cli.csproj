@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Shredder.Cli</RootNamespace>
+    <AssemblyName>shredder</AssemblyName>
+    <!-- 控制台入口:二次确认 / 进度条都要写到 stdout -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 强制以 UTF-8 处理 stdin/stdout,确保中文关键字「粉碎」能正确读写 -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shredder.Core\Shredder.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 让 Shredder.Tests 能调到 internal 类型 (CliArgs / CliRunner helpers / ConsoleProgressRenderer) -->
+    <InternalsVisibleTo Include="Shredder.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Hosting + DI + Configuration -->
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.8" />
+
+    <!-- Serilog: 与 WPF 宿主同款流水线,共享 PathRedactingEnricher -->
+    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+    <PackageReference Include="Serilog.Enrichers.Process" Version="3.0.0" />
+    <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

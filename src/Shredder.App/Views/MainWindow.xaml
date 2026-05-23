@@ -1,0 +1,44 @@
+<ui:FluentWindow x:Class="Shredder.App.Views.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:pages="clr-namespace:Shredder.App.Views.Pages"
+                 Title="粉碎一切" Height="720" Width="1100"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round"
+                 WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="粉碎一切 · Shredder"/>
+
+        <ui:NavigationView Grid.Row="1" x:Name="RootNavigation"
+                           PaneDisplayMode="Left"
+                           OpenPaneLength="220"
+                           IsPaneToggleVisible="True">
+            <ui:NavigationView.MenuItems>
+                <ui:NavigationViewItem Content="文件粉碎"
+                                       Icon="{ui:SymbolIcon DeleteDismiss24}"
+                                       TargetPageType="{x:Type pages:ShredPage}"/>
+                <ui:NavigationViewItem Content="空闲空间擦除"
+                                       Icon="{ui:SymbolIcon EraserSegment24}"
+                                       TargetPageType="{x:Type pages:FreeSpacePage}"/>
+                <ui:NavigationViewItem Content="回收站"
+                                       Icon="{ui:SymbolIcon Delete24}"
+                                       TargetPageType="{x:Type pages:RecycleBinPage}"/>
+            </ui:NavigationView.MenuItems>
+            <ui:NavigationView.FooterMenuItems>
+                <ui:NavigationViewItem Content="设置"
+                                       Icon="{ui:SymbolIcon Settings24}"
+                                       TargetPageType="{x:Type pages:SettingsPage}"/>
+                <ui:NavigationViewItem Content="关于"
+                                       Icon="{ui:SymbolIcon Info24}"
+                                       TargetPageType="{x:Type pages:AboutPage}"/>
+            </ui:NavigationView.FooterMenuItems>
+        </ui:NavigationView>
+    </Grid>
+</ui:FluentWindow>

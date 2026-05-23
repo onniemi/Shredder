@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Shredder.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 抽象层:Core 只依赖抽象,不绑定具体实现/宿主 -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.8" />
+
+    <!-- PathRedactingEnricher 需要 Serilog 接口;只引核心包,sink/settings 由宿主自行选 -->
+    <PackageReference Include="Serilog" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Shredder.Tests" />
+    <!--
+      benchmark 项目复用 ShredService.CreateForTests 构造极简服务实例。
+      benchmark 不进 CI,只供本地手动复测,等价于"开发态"消费者。
+    -->
+    <InternalsVisibleTo Include="Shredder.Benchmarks" />
+  </ItemGroup>
+</Project>

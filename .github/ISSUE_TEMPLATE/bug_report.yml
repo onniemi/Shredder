@@ -1,0 +1,118 @@
+name: Bug 报告
+description: 报告功能异常 / 崩溃 / 与文档不符的行为
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢花时间报告 Bug。
+
+        ⚠️ **如果这是安全问题(护栏绕过、误删、越权、数据残留、日志泄露等),请不要在这里公开,先看 [SECURITY.md](../blob/main/SECURITY.md) 走私有报告流程。**
+
+        请避免在 issue 里贴真实敏感路径 / 文件名;能脱敏就脱敏。
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 现象
+      description: 一两句话描述问题。
+      placeholder: 例:dod7 粉碎含 ADS 的文件后,ADS 副流没被清掉。
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: 最小复现步骤
+      description: 越短越好;能写成命令更佳。
+      placeholder: |
+        1. 创建文件 D:\test\sample.txt 并附加 ADS:`echo "x" > sample.txt:hidden`
+        2. 运行 `shredder D:\test\sample.txt --algo dod7 -y`
+        3. 用 `dir /r` 查看 ADS 状态
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期 vs 实际
+      placeholder: |
+        预期:主文件 + ADS 副流都被覆写并删除。
+        实际:主文件被删,但 :hidden 副流仍在。
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Shredder 版本
+      description: 运行 `shredder --version`,或在 WPF 主界面的「关于」查看。
+      placeholder: 例:0.2.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: entry
+    attributes:
+      label: 使用入口
+      multiple: true
+      options:
+        - CLI (shredder.exe)
+        - WPF GUI (Shredder.exe)
+        - 资源管理器右键菜单
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Windows 版本
+      description: 运行 `winver`。
+      placeholder: 例:Windows 11 23H2 (build 22631.3447)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: fs
+    attributes:
+      label: 文件系统
+      multiple: true
+      options:
+        - NTFS
+        - ReFS
+        - FAT32
+        - exFAT
+        - 网络共享 (SMB/NFS)
+        - 其他(请在备注里写明)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: storage
+    attributes:
+      label: 存储介质
+      options:
+        - HDD (机械硬盘)
+        - SATA SSD
+        - NVMe SSD
+        - 移动硬盘 / U 盘
+        - 云盘 / 同步盘
+        - 不确定
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志片段(可选)
+      description: |
+        日志默认在 `%LOCALAPPDATA%\Shredder\logs\`。请只贴必要片段,路径默认已脱敏成 SHA-256 短哈希。
+      render: text
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 其他备注(可选)
+      description: 截图、相关 issue 链接、临时绕过方式等。

@@ -1,0 +1,45 @@
+# Build output
+bin/
+obj/
+artifacts/
+TestResults/
+coverage/
+
+# BenchmarkDotNet
+BenchmarkDotNet.Artifacts/
+**/BenchmarkDotNet.Artifacts/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# .NET
+*.nupkg
+*.snupkg
+project.lock.json
+
+# Logs and local captures
+*.log
+logs/
+*.etl
+*.dmp
+*.dump
+capture/
+screenshots/
+
+# Publish/install outputs
+publish/
+installer/
+*.msix
+*.msixbundle
+*.appinstaller
+*.zip
+
+# OS noise
+Thumbs.db
+Desktop.ini
+
