@@ -43,7 +43,7 @@
 ### Known limitations
 
 - `Shredder:Io:UseUnbufferedIo` 配置项保留但暂未实装(需要扇区对齐 `FILE_FLAG_NO_BUFFERING` 支持),将在后续版本接入。
-- Release 同时提供 5 个 zip:`app simple` 为简约图形界面,`app full` / `app light` 为完整图形界面,`cli full` / `cli light` 为命令行版;`full` / `simple` 包内自带运行时,`light` 体积更小但要求用户已安装 .NET 10 / .NET 10 Desktop Runtime。
+- Release 同时提供 4 个图形界面 zip:`simple-ui full/light` 为简约界面,`full-ui full/light` 为完整图形界面;`full` 包内自带 .NET 10 桌面运行时,`light` 体积更小但要求用户已安装 .NET 10 Desktop Runtime。
 
 ## [0.2.0] - 待发布
 
@@ -57,8 +57,7 @@
 - 多目标支持:一次命令传多个文件/目录,部分失败以退出码 4 区分。
 - 退出码契约:`0` 成功、`1` 用法错误/通用失败、`2` 命中 Forbidden(`-y` 不能跳过)、`3` 用户拒绝二次确认、`4` 多目标部分失败、`5` 收到 Ctrl-C。
 - GitHub Actions CI:`build` job 在 `windows-latest` 上跑 `dotnet restore` + `dotnet build -c Release` + `dotnet test`,任何 warning 因 `TreatWarningsAsErrors` 直接红。
-- Tag 触发的 Release 流水线:推 `v*` tag 自动发布 win-x64 的 `app simple`、`app full`、`app light`、`cli full`、`cli light` 五个包,版本号从 tag 注入。
-- 发布产物附带 SHA-256 校验和(`.sha256` 文件,GNU `sha256sum -c` 兼容,LF 行尾)。
+- Tag 触发的 Release 流水线:推 `v*` tag 自动发布 win-x64 的 `simple-ui full/light`、`full-ui full/light` 四个图形界面包,版本号从 tag 注入。
 - `.github/` 仓库脚手架:`PULL_REQUEST_TEMPLATE.md`、`ISSUE_TEMPLATE/`(Bug Form + Feature Form + config redirect 到 SECURITY.md)。
 - README 顶部 CI 构建徽章。
 

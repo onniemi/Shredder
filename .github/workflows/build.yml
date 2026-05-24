@@ -42,59 +42,7 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Resolved version: $VERSION"
 
-      - name: Publish CLI full (self-contained)
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          dotnet publish src/Shredder.Cli/Shredder.Cli.csproj \
-            -c Release \
-            -r win-x64 \
-            --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
-            -p:Version=${{ steps.ver.outputs.version }} \
-            -o publish/cli-full
-
-      - name: Publish CLI light (requires .NET runtime)
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          dotnet publish src/Shredder.Cli/Shredder.Cli.csproj \
-            -c Release \
-            -r win-x64 \
-            --self-contained false \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
-            -p:Version=${{ steps.ver.outputs.version }} \
-            -o publish/cli-light
-
-      - name: Publish WPF App full (self-contained)
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          dotnet publish src/Shredder.App/Shredder.App.csproj \
-            -c Release \
-            -r win-x64 \
-            --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
-            -p:Version=${{ steps.ver.outputs.version }} \
-            -o publish/app-full
-
-      - name: Publish WPF App light (requires .NET Desktop Runtime)
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          dotnet publish src/Shredder.App/Shredder.App.csproj \
-            -c Release \
-            -r win-x64 \
-            --self-contained false \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
-            -p:Version=${{ steps.ver.outputs.version }} \
-            -o publish/app-light
-
-      - name: Publish WPF App simple (minimal UI, self-contained)
+      - name: Publish simple UI full (self-contained)
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
@@ -106,22 +54,60 @@ jobs:
             -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:SimpleUi=true \
             -p:Version=${{ steps.ver.outputs.version }} \
-            -o publish/app-simple
+            -o publish/simple-ui-full
+
+      - name: Publish simple UI light (requires .NET Desktop Runtime)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          dotnet publish src/Shredder.App/Shredder.App.csproj \
+            -c Release \
+            -r win-x64 \
+            --self-contained false \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:SimpleUi=true \
+            -p:Version=${{ steps.ver.outputs.version }} \
+            -o publish/simple-ui-light
+
+      - name: Publish full UI full (self-contained)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          dotnet publish src/Shredder.App/Shredder.App.csproj \
+            -c Release \
+            -r win-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:Version=${{ steps.ver.outputs.version }} \
+            -o publish/full-ui-full
+
+      - name: Publish full UI light (requires .NET Desktop Runtime)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          dotnet publish src/Shredder.App/Shredder.App.csproj \
+            -c Release \
+            -r win-x64 \
+            --self-contained false \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:Version=${{ steps.ver.outputs.version }} \
+            -o publish/full-ui-light
 
       - name: Zip release assets
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
-          Compress-Archive -Path publish/cli-full/* `
-            -DestinationPath shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-full.zip
-          Compress-Archive -Path publish/cli-light/* `
-            -DestinationPath shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-light.zip
-          Compress-Archive -Path publish/app-full/* `
-            -DestinationPath shredder-app-v${{ steps.ver.outputs.version }}-win-x64-full.zip
-          Compress-Archive -Path publish/app-light/* `
-            -DestinationPath shredder-app-v${{ steps.ver.outputs.version }}-win-x64-light.zip
-          Compress-Archive -Path publish/app-simple/* `
-            -DestinationPath shredder-app-v${{ steps.ver.outputs.version }}-win-x64-simple.zip
+          Compress-Archive -Path publish/simple-ui-full/* `
+            -DestinationPath shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
+          Compress-Archive -Path publish/simple-ui-light/* `
+            -DestinationPath shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
+          Compress-Archive -Path publish/full-ui-full/* `
+            -DestinationPath shredder-full-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
+          Compress-Archive -Path publish/full-ui-light/* `
+            -DestinationPath shredder-full-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -133,28 +119,33 @@ jobs:
 
             | 文件 | 适合谁 | 说明 |
             | --- | --- | --- |
-            | `shredder-app-v${{ steps.ver.outputs.version }}-win-x64-simple.zip` | 只想要最简单界面的用户 | WPF 简约界面，只显示文件/文件夹粉碎，自带 .NET 10 桌面运行时 |
-            | `shredder-app-v${{ steps.ver.outputs.version }}-win-x64-full.zip` | 想保留完整图形界面的用户 | WPF 完整界面，内置 .NET 10 桌面运行时，体积较大 |
-            | `shredder-app-v${{ steps.ver.outputs.version }}-win-x64-light.zip` | 已安装 .NET 10 Desktop Runtime 的用户 | WPF 完整界面，体积小，需要本机已有运行时 |
-            | `shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-full.zip` | 脚本/服务器/远程环境 | 命令行版，内置 .NET 10 运行时 |
-            | `shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-light.zip` | 已安装 .NET 10 Runtime 的脚本用户 | 命令行版，体积小，需要本机已有运行时 |
+            | `shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip` | 想要最简单界面,且不想安装运行时的用户 | 简约界面,只显示文件/文件夹粉碎,自带 .NET 10 桌面运行时,体积较大 |
+            | `shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip` | 想要最简单界面,且已安装 .NET 10 Desktop Runtime 的用户 | 简约界面,体积小,需要本机已有运行时 |
+            | `shredder-full-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip` | 想要完整图形界面,且不想安装运行时的用户 | 完整图形界面,自带 .NET 10 桌面运行时,体积较大 |
+            | `shredder-full-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip` | 想要完整图形界面,且已安装 .NET 10 Desktop Runtime 的用户 | 完整图形界面,体积小,需要本机已有运行时 |
 
-            拿不准就下载 `app simple`。想要完整界面就下载 `app full`；想要最小体积，并且已经安装运行时，就下载 `light`。
+            拿不准就下载 `simple-ui full`。已经安装 .NET 10 Desktop Runtime 的用户可下载 `light` 小体积版。
 
             GitHub 自动附带的 `Source code` 是源码包，普通用户不用下载。
           files: |
-            shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-full.zip
-            shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-light.zip
-            shredder-app-v${{ steps.ver.outputs.version }}-win-x64-full.zip
-            shredder-app-v${{ steps.ver.outputs.version }}-win-x64-light.zip
-            shredder-app-v${{ steps.ver.outputs.version }}-win-x64-simple.zip
+            shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
+            shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
+            shredder-full-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
+            shredder-full-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
 
-      - name: Remove old checksum assets
+      - name: Remove old release assets
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/github-script@v7
         with:
           script: |
             const tag = context.ref.replace('refs/tags/', '');
+            const version = tag.replace(/^v/, '');
+            const keep = new Set([
+              `shredder-simple-ui-v${version}-win-x64-full.zip`,
+              `shredder-simple-ui-v${version}-win-x64-light.zip`,
+              `shredder-full-ui-v${version}-win-x64-full.zip`,
+              `shredder-full-ui-v${version}-win-x64-light.zip`,
+            ]);
             const { data: release } = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -162,7 +153,7 @@ jobs:
             });
 
             for (const asset of release.assets) {
-              if (!asset.name.endsWith('.sha256')) continue;
+              if (keep.has(asset.name)) continue;
 
               await github.rest.repos.deleteReleaseAsset({
                 owner: context.repo.owner,
