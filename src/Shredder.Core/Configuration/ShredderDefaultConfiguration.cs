@@ -49,7 +49,7 @@ public static class ShredderDefaultConfiguration
             ["Shredder:FreeSpace:ScrubMftSlack"] = "true",
             ["Shredder:FreeSpace:DisableOnSsd"] = "true",
             ["Shredder:FreeSpace:FallbackToTrimOnSsd"] = "true",
-            ["Shredder:Algorithm:Default"] = "Purge-3Pass",
+            ["Shredder:Algorithm:Default"] = "Purge-7Pass",
             ["Shredder:Algorithm:SsdDefault"] = "CryptoErase",
             ["Shredder:Ui:ConfirmationKeyword"] = "粉碎",
             ["Shredder:Ui:ConfirmationCooldownSeconds"] = "5",

@@ -27,7 +27,7 @@ public sealed partial class AboutPageViewModel : ObservableObject
     public string RuntimeVersion { get; }
     public string OsVersion { get; }
     public string Copyright { get; }
-    public string Repository { get; } = "https://github.com/ — 待发布";
+    public string Repository { get; } = "https://github.com/onniemi/Shredder";
     public string License { get; } = "MIT License（开源、免费、可自由使用、修改和分发）";
 
     public IReadOnlyList<ThirdPartyNoticeItem> ThirdPartyNotices { get; }

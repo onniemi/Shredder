@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Shredder.App.ViewModels;
 
 namespace Shredder.App.Views.Pages;
@@ -29,4 +30,10 @@ public partial class AboutPage : Page
     private void OnOpenLogsFolderClick(object sender, RoutedEventArgs e) => _vm.OpenLogsFolder();
 
     private void OnOpenLastDiagnosticsClick(object sender, RoutedEventArgs e) => _vm.OpenLastDiagnostics();
+
+    private void OnAboutMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        AboutScrollViewer.ScrollToVerticalOffset(AboutScrollViewer.VerticalOffset - e.Delta);
+        e.Handled = true;
+    }
 }

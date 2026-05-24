@@ -1,10 +1,10 @@
 using System.IO;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.Extensions.Options;
 using Microsoft.Win32;
 using Shredder.App.ViewModels;
-using Shredder.Core.Configuration;
+using Shredder.App.Views;
 using Shredder.Core.Models;
 using Shredder.Core.Security;
 
@@ -16,16 +16,13 @@ namespace Shredder.App.Views.Pages;
 public partial class ShredPage : Page
 {
     private readonly ShredPageViewModel _vm;
-    private readonly IOptions<ShredderOptions> _options;
     private readonly PathSafetyGuard _guard;
 
-    public ShredPage(ShredPageViewModel vm, IOptions<ShredderOptions> options, PathSafetyGuard guard)
+    public ShredPage(ShredPageViewModel vm, PathSafetyGuard guard)
     {
         ArgumentNullException.ThrowIfNull(vm);
-        ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(guard);
         _vm = vm;
-        _options = options;
         _guard = guard;
         InitializeComponent();
         DataContext = _vm;
@@ -79,43 +76,83 @@ public partial class ShredPage : Page
 
     private async void OnStartClick(object sender, RoutedEventArgs e)
     {
+        if (!CanRunPendingJobs()) return;
+        await _vm.RunAsync();
+        ShowFailureAdviceIfNeeded();
+    }
+
+    private async void OnFastStartClick(object sender, RoutedEventArgs e)
+    {
+        if (!CanRunPendingJobs()) return;
+        await _vm.RunFastAsync();
+        ShowFailureAdviceIfNeeded();
+    }
+
+    private void ShowFailureAdviceIfNeeded()
+    {
+        if (string.IsNullOrWhiteSpace(_vm.LastRunFailureMessage)) return;
+
+        var owner = Window.GetWindow(this);
+        if (owner is null) return;
+
+        var result = ThemedPromptDialog.Confirm(
+            owner,
+            "粉碎失败",
+            _vm.LastRunFailureMessage + "\n\n是否现在以管理员身份重新打开软件？",
+            "是",
+            "否");
+
+        if (result)
+        {
+            RestartAsAdministrator();
+        }
+    }
+
+    private static void RestartAsAdministrator()
+    {
+        var exePath = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(exePath)) return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(exePath)
+            {
+                UseShellExecute = true,
+                Verb = "runas",
+            });
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            // 用户取消 UAC 或系统拒绝时保持当前窗口继续可用。
+        }
+    }
+
+    private bool CanRunPendingJobs()
+    {
         var pending = _vm.Jobs
             .Where(j => j.Status == ShredJobStatus.Pending)
             .Select(j => j.Path)
             .ToList();
         if (pending.Count == 0)
         {
-            MessageBox.Show("没有待处理的项目。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
+            ShowAlert("提示", "没有待处理的文件。");
+            return false;
         }
 
-        var warnings = new List<string>();
         foreach (var path in pending)
         {
             var decision = _guard.Evaluate(path);
             if (decision.Level == PathSafetyGuard.PathSafetyLevel.Forbidden)
             {
-                MessageBox.Show(
-                    $"{path}\n\n{decision.Reason}",
+                ShowAlert(
                     "已阻止高风险目标",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
-
-            if (decision.Level == PathSafetyGuard.PathSafetyLevel.Warn)
-            {
-                warnings.Add($"{path}\n{decision.Reason}");
+                    $"{path}\n\n{decision.Reason}");
+                return false;
             }
         }
 
-        if (warnings.Count > 0)
-        {
-            var dlg = new ConfirmShredDialog(_options, warnings) { Owner = Window.GetWindow(this) };
-            if (dlg.ShowDialog() != true) return;
-        }
-
-        await _vm.RunAsync();
+        return true;
     }
 
     private void OnRemoveJobClick(object sender, RoutedEventArgs e)
@@ -133,4 +170,11 @@ public partial class ShredPage : Page
     private void OnClearHistoryClick(object sender, RoutedEventArgs e) => _vm.ClearHistory();
 
     private void OnRefreshHistoryClick(object sender, RoutedEventArgs e) => _vm.RefreshHistory();
+
+    private void ShowAlert(string title, string message)
+    {
+        var owner = Window.GetWindow(this);
+        if (owner is null) return;
+        ThemedPromptDialog.Alert(owner, title, message);
+    }
 }

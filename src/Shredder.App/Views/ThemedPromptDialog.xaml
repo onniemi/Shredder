@@ -1,0 +1,96 @@
+<Window x:Class="Shredder.App.Views.ThemedPromptDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="提示"
+        Width="380"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Foreground="#FFFFFFFF"
+        ShowInTaskbar="False">
+    <Border Background="#FF1F1F1F"
+            BorderBrush="#FF3B3735"
+            BorderThickness="1"
+            CornerRadius="6">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="36"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid Background="#FF1F1F1F"
+                  MouseLeftButtonDown="OnTitleMouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="36"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="WindowTitleText"
+                           Margin="12,0,0,0"
+                           VerticalAlignment="Center"
+                           Text="提示"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Foreground="#FFE8E1DC"/>
+                <Button Grid.Column="1"
+                        Padding="0"
+                        BorderThickness="0"
+                        Background="Transparent"
+                        Foreground="#FFE8E1DC"
+                        Content="x"
+                        FontSize="16"
+                        Click="OnCloseClick"/>
+            </Grid>
+
+            <Grid Grid.Row="1" Margin="22,20,22,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Width="34" Height="34" CornerRadius="17" Background="#33FFB020">
+                    <ui:SymbolIcon x:Name="DialogIcon"
+                                   Symbol="Info24"
+                                   FontSize="20"
+                                   Foreground="#FFFFB020"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                    <TextBlock x:Name="TitleText"
+                               Text="提示"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Foreground="#FFFFFFFF"/>
+                    <TextBlock x:Name="MessageText"
+                               Margin="0,12,0,0"
+                               TextWrapping="Wrap"
+                               FontSize="14"
+                               LineHeight="22"
+                               Foreground="#FFE8E1DC"/>
+                </StackPanel>
+            </Grid>
+
+            <StackPanel Grid.Row="2"
+                        Margin="22,20,22,22"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <ui:Button x:Name="PrimaryButton"
+                           Content="确定"
+                           Appearance="Primary"
+                           MinWidth="92"
+                           Padding="16,8"
+                           Click="OnPrimaryClick"/>
+                <ui:Button x:Name="SecondaryButton"
+                           Content="取消"
+                           MinWidth="92"
+                           Padding="16,8"
+                           Margin="10,0,0,0"
+                           Click="OnSecondaryClick"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

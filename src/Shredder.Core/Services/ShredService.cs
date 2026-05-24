@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shredder.Core.Algorithms;
@@ -27,6 +28,9 @@ namespace Shredder.Core.Services;
 /// </remarks>
 public sealed class ShredService
 {
+    private const int MetadataRenamePasses = 7;
+    private static readonly DateTime s_scrubbedFileTimeUtc = new(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
     private readonly IShredAlgorithmRegistry _registry;
     private readonly ShredderOptions _options;
     private readonly PathSafetyGuard _pathGuard;
@@ -195,7 +199,7 @@ public sealed class ShredService
 
         // 后序遍历:先文件再目录。文件阶段按 MaxConcurrentFiles 受控并发(默认 1=串行),
         // 目录删除阶段强制串行(并发删父目录可能与正在删的子目录冲突)。
-        int concurrency = Math.Max(1, _options.Io.MaxConcurrentFiles);
+        int concurrency = ResolveFileConcurrency(algorithm);
         var files = Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories);
 
         if (concurrency == 1)
@@ -257,49 +261,45 @@ public sealed class ShredService
                 attrsCleared = true;
             }
 
-            // 3. ADS:先处理非主流(主流由后面的 fs 覆写)
-            if (_options.Safety.ShredAlternateDataStreams)
-                await ShredAdsAsync(path, algorithm, p, ct);
+            var fastDelete = algorithm.Id.Equals(ShredAlgorithmIds.FastDelete, StringComparison.OrdinalIgnoreCase);
 
-            // 4. MFT 驻留小文件膨胀
-            await _mftHandler.InflateIfResidentAsync(path, ct);
-
-            // 5. 主流覆写
-            long length = new FileInfo(path).Length;
-            if (length > 0)
+            if (!fastDelete)
             {
-                FileStream fs;
-                try
-                {
-                    fs = OpenForExclusiveWrite(path);
-                }
-                catch (IOException ioex) when (_options.Safety.UseRestartManagerForLockedFiles)
-                {
-                    // 占用时附带诊断信息
-                    var lockers = _lockResolver.GetLockingProcesses(path);
-                    if (lockers.Count > 0)
-                    {
-                        string who = string.Join(", ", lockers.Select(l => $"{l.AppName}(PID={l.ProcessId})"));
-                        throw new IOException($"文件被以下进程占用,无法粉碎:{who}", ioex);
-                    }
-                    throw;
-                }
+                // 3. ADS:先处理非主流(主流由后面的 fs 覆写)
+                if (_options.Safety.ShredAlternateDataStreams)
+                    await ShredAdsAsync(path, algorithm, p, ct);
+
+                // 4. MFT 驻留小文件膨胀
+                await InflateIfResidentResolvingLocksAsync(path, ct);
+            }
+
+            // 5. 主流覆写。快速粉碎跳过大文件覆写,只做截断、随机改名和删除。
+            long length = new FileInfo(path).Length;
+            if (length > 0 && !fastDelete)
+            {
+                var fs = OpenForExclusiveWriteResolvingLocks(path);
 
                 await using (fs)
                 {
                     await algorithm.ShredAsync(fs, length, path, p, ct);
                 }
             }
+            else if (fastDelete)
+            {
+                await EnsureExclusiveAccessForFastDeleteAsync(path, p, ct);
+            }
 
-            // 6. 截断到 0 并改名为随机串
+            // 6. 截断到 0,清理时间戳,并多轮随机改名后删除。
             using (var trunc = new FileStream(path, FileMode.Truncate)) { }
+            TryScrubFileTimestamps(path);
             var dir = Path.GetDirectoryName(path)!;
             string current = path;
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < MetadataRenamePasses; i++)
             {
                 string next = Path.Combine(dir, Guid.NewGuid().ToString("N"));
                 File.Move(current, next);
                 current = next;
+                TryScrubFileTimestamps(current);
             }
             File.Delete(current);
         }
@@ -321,6 +321,18 @@ public sealed class ShredService
         }
     }
 
+    internal int ResolveFileConcurrency(IShredAlgorithm algorithm)
+    {
+        int configured = Math.Max(1, _options.Io.MaxConcurrentFiles);
+        if (!algorithm.Id.Equals(ShredAlgorithmIds.FastDelete, StringComparison.OrdinalIgnoreCase))
+        {
+            return configured;
+        }
+
+        if (configured <= 1) configured = 4;
+        return Math.Clamp(configured, 1, 8);
+    }
+
     private static FileStream OpenForExclusiveWrite(string path) =>
         new(
             path,
@@ -329,6 +341,154 @@ public sealed class ShredService
             FileShare.None,
             bufferSize: 4096,
             useAsync: true);
+
+    private async Task EnsureExclusiveAccessForFastDeleteAsync(
+        string path,
+        IProgress<ShredProgress>? progress,
+        CancellationToken ct)
+    {
+        await using var fs = OpenForExclusiveWriteResolvingLocks(path);
+        progress?.Report(new ShredProgress(path, 0, 0, 0, fs.Length));
+        await fs.FlushAsync(ct);
+    }
+
+    private async Task InflateIfResidentResolvingLocksAsync(string path, CancellationToken ct)
+    {
+        try
+        {
+            await _mftHandler.InflateIfResidentAsync(path, ct);
+        }
+        catch (Exception inflateEx) when (CanResolveLockedFile(inflateEx))
+        {
+            if (!TryReleaseLocksForPath(path, out var lockers))
+            {
+                if (lockers.Count > 0)
+                {
+                    throw BuildLockedFileException(path, lockers, inflateEx);
+                }
+
+                throw;
+            }
+
+            try
+            {
+                await _mftHandler.InflateIfResidentAsync(path, ct);
+            }
+            catch (Exception retryEx) when (IsFileLockOrAccessException(retryEx))
+            {
+                throw BuildLockedFileException(path, lockers, retryEx);
+            }
+        }
+    }
+
+    private FileStream OpenForExclusiveWriteResolvingLocks(string path)
+    {
+        try
+        {
+            return OpenForExclusiveWrite(path);
+        }
+        catch (Exception openEx) when (CanResolveLockedFile(openEx))
+        {
+            if (!TryReleaseLocksForPath(path, out var lockers))
+            {
+                if (lockers.Count > 0)
+                {
+                    throw BuildLockedFileException(path, lockers, openEx);
+                }
+
+                throw;
+            }
+
+            try
+            {
+                return OpenForExclusiveWrite(path);
+            }
+            catch (Exception retryEx) when (IsFileLockOrAccessException(retryEx))
+            {
+                throw BuildLockedFileException(path, lockers, retryEx);
+            }
+        }
+    }
+
+    private bool CanResolveLockedFile(Exception ex) =>
+        _options.Safety.UseRestartManagerForLockedFiles && IsFileLockOrAccessException(ex);
+
+    private bool TryReleaseLocksForPath(
+        string path,
+        out IReadOnlyList<FileLockResolver.LockingProcess> lockers)
+    {
+        lockers = _lockResolver.GetLockingProcesses(path);
+        return lockers.Count > 0 && TryTerminateLockers(lockers);
+    }
+
+    private static bool IsFileLockOrAccessException(Exception ex) =>
+        ex is IOException or UnauthorizedAccessException;
+
+    private bool TryTerminateLockers(IReadOnlyList<FileLockResolver.LockingProcess> lockers)
+    {
+        var currentPid = Environment.ProcessId;
+        var candidates = lockers
+            .Where(p => p.ProcessId != currentPid)
+            .Where(IsSafeToTerminate)
+            .Distinct()
+            .ToArray();
+
+        if (candidates.Length == 0) return false;
+
+        var attempted = false;
+        foreach (var locker in candidates)
+        {
+            try
+            {
+                using var process = Process.GetProcessById(locker.ProcessId);
+                if (process.HasExited) continue;
+                attempted = true;
+
+                _logger.LogWarning(
+                    "Closing locking process before shred: {AppName}({Pid}) type={Type}",
+                    locker.AppName,
+                    locker.ProcessId,
+                    locker.Type);
+
+                if (process.CloseMainWindow() && process.WaitForExit(1500))
+                {
+                    continue;
+                }
+
+                process.Kill(entireProcessTree: true);
+                _ = process.WaitForExit(3000);
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to close locking process before shred: {AppName}({Pid})",
+                    locker.AppName,
+                    locker.ProcessId);
+            }
+        }
+
+        return attempted;
+    }
+
+    private static bool IsSafeToTerminate(FileLockResolver.LockingProcess process)
+    {
+        if (process.ProcessId <= 4) return false;
+        return process.Type is
+            FileLockResolver.AppType.MainWindow or
+            FileLockResolver.AppType.OtherWindow or
+            FileLockResolver.AppType.Console or
+            FileLockResolver.AppType.Unknown;
+    }
+
+    private static IOException BuildLockedFileException(
+        string path,
+        IReadOnlyList<FileLockResolver.LockingProcess> lockers,
+        Exception inner)
+    {
+        string who = string.Join(", ", lockers.Select(l => $"{l.AppName}(PID={l.ProcessId})"));
+        return new IOException($"文件被以下进程占用,无法粉碎:{who}", inner);
+    }
 
     private async Task ShredAdsAsync(string path, IShredAlgorithm algorithm, IProgress<ShredProgress>? p, CancellationToken ct)
     {
@@ -380,9 +540,42 @@ public sealed class ShredService
     {
         if (!Directory.Exists(dir)) return;
         var parent = Path.GetDirectoryName(dir)!;
-        var renamed = Path.Combine(parent, Guid.NewGuid().ToString("N"));
-        Directory.Move(dir, renamed);
-        Directory.Delete(renamed, recursive: true);
+        string current = dir;
+        TryScrubDirectoryTimestamps(current);
+        for (int i = 0; i < MetadataRenamePasses; i++)
+        {
+            var renamed = Path.Combine(parent, Guid.NewGuid().ToString("N"));
+            Directory.Move(current, renamed);
+            current = renamed;
+            TryScrubDirectoryTimestamps(current);
+        }
+        Directory.Delete(current, recursive: true);
+    }
+
+    private static void TryScrubFileTimestamps(string path)
+    {
+        try
+        {
+            File.SetCreationTimeUtc(path, s_scrubbedFileTimeUtc);
+            File.SetLastAccessTimeUtc(path, s_scrubbedFileTimeUtc);
+            File.SetLastWriteTimeUtc(path, s_scrubbedFileTimeUtc);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+        }
+    }
+
+    private static void TryScrubDirectoryTimestamps(string path)
+    {
+        try
+        {
+            Directory.SetCreationTimeUtc(path, s_scrubbedFileTimeUtc);
+            Directory.SetLastAccessTimeUtc(path, s_scrubbedFileTimeUtc);
+            Directory.SetLastWriteTimeUtc(path, s_scrubbedFileTimeUtc);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+        }
     }
 
     private void EnsurePathAllowed(string path)
@@ -390,6 +583,6 @@ public sealed class ShredService
         var decision = _pathGuard.Evaluate(path);
         if (decision.Level == PathSafetyGuard.PathSafetyLevel.Forbidden)
             throw new InvalidOperationException(decision.Reason);
-        // Warn 由 UI 负责弹二次确认,Service 层不负责拦截
+        // Warn 只保留风险分级信息,不拦截执行。
     }
 }

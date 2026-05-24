@@ -41,6 +41,7 @@ public static class ServiceCollectionExtensions
             new DoD522022MAlgorithm(passes: 7, sp.GetRequiredService<IOptions<ShredderOptions>>()));
         services.AddSingleton<IShredAlgorithm, ZeroFillRenameAlgorithm>();
         services.AddSingleton<IShredAlgorithm, CryptoEraseAlgorithm>();
+        services.AddSingleton<IShredAlgorithm, FastDeleteAlgorithm>();
 
         // 3. 算法仓库
         services.AddSingleton<IShredAlgorithmRegistry, ShredAlgorithmRegistry>();

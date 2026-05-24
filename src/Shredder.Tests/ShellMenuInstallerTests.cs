@@ -50,6 +50,16 @@ public sealed class ShellMenuInstallerTests : IDisposable
     }
 
     [Fact]
+    public void Install_CommandPassesSelectedPathToApp()
+    {
+        const string exe = @"C:\Tools\Shredder.exe";
+        ShellMenuInstaller.Install(exe, _testRoot);
+
+        using var fileCmd = _testRoot.OpenSubKey(ShellMenuInstaller.FileKey + @"\command");
+        Assert.Equal($"\"{exe}\" \"%1\"", fileCmd!.GetValue(null));
+    }
+
+    [Fact]
     public void Install_IsIdempotent_RepeatedCallsKeepInstalled()
     {
         const string exe = @"C:\Tools\Shredder.exe";

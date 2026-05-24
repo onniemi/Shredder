@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -30,15 +31,19 @@ public sealed partial class ShredPageViewModel : ObservableObject, IDisposable
     public ObservableCollection<ShredHistoryRow> HistoryItems { get; } = new();
 
     [ObservableProperty] private double _progressPercent;
-    [ObservableProperty] private string _progressText = string.Empty;
+    [ObservableProperty] private string _progressText = "就绪";
+    [ObservableProperty] private string _progressState = "Idle";
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isHistoryVisible;
     [ObservableProperty] private string _historySummary = "暂无粉碎历史";
+    [ObservableProperty] private string? _lastRunFailureMessage;
+    [ObservableProperty] private string? _lastRunFailureReason;
 
     /// <summary>最近一次生成的报告（HTML 优先）的绝对路径，为 null 表示尚未生成。</summary>
     [ObservableProperty] private string? _lastReportPath;
 
     private CancellationTokenSource? _cts;
+    private int _acceptProgressUpdates;
 
     public ShredPageViewModel(
         ShredService shredService,
@@ -82,73 +87,56 @@ public sealed partial class ShredPageViewModel : ObservableObject, IDisposable
 
     [SuppressMessage("Design", "CA1031:DoNotCatchGeneralExceptionTypes",
         Justification = "UI 命令边界:单个 job 失败不应中断整批 job 队列,异常已记录到日志并写入 Job.ErrorMessage(由 ShredService)。")]
-    public async Task RunAsync()
+    public Task RunAsync() => RunAsync(algorithmId: null);
+
+    public Task RunFastAsync() => RunAsync(ShredAlgorithmIds.FastDelete);
+
+    [SuppressMessage("Design", "CA1031:DoNotCatchGeneralExceptionTypes",
+        Justification = "UI command boundary: a single job failure should be logged and stored without stopping the whole batch.")]
+    private async Task RunAsync(string? algorithmId)
     {
         if (IsBusy) return;
         IsBusy = true;
+        LastRunFailureMessage = null;
+        LastRunFailureReason = null;
+        Volatile.Write(ref _acceptProgressUpdates, 1);
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
         var progress = new Progress<ShredProgress>(OnProgress);
 
-        var entries = new List<ShredAuditEntry>();
+        var entries = new ConcurrentBag<ShredAuditEntry>();
         var batchStart = DateTimeOffset.Now;
 
         try
         {
-            foreach (var row in Jobs.Where(r => r.Status == ShredJobStatus.Pending).ToList())
+            var pendingRows = Jobs.Where(r => r.Status == ShredJobStatus.Pending).ToList();
+            if (IsFastDeleteAlgorithm(algorithmId) && pendingRows.Count > 1)
             {
-                if (_cts.IsCancellationRequested) break;
-                var job = row.BuildJob();
-                var entryStart = DateTimeOffset.Now;
-                IShredAlgorithm? algorithm = null;
-                try
-                {
-                    algorithm = _shredService.PreviewAlgorithm(row.Path, job.AlgorithmId);
-                }
-                catch (InvalidOperationException)
-                {
-                    // ShredAsync will surface the same configuration issue as the job failure.
-                }
-
-                try
-                {
-                    row.Status = ShredJobStatus.Running;
-                    ProgressText = $"正在粉碎 {row.Name}";
-                    await _shredService.ShredAsync(job, progress, _cts.Token);
-                }
-                catch (OperationCanceledException) { row.SyncFrom(job); }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Run job failed: {Path}", row.Path);
-                }
-                row.SyncFrom(job);
-
-                entries.Add(new ShredAuditEntry
-                {
-                    Path = row.Path,
-                    IsDirectory = row.IsDirectory,
-                    SizeBytes = row.SizeBytes,
-                    AlgorithmId = algorithm?.Id ?? job.AlgorithmId,
-                    AlgorithmName = algorithm?.Name,
-                    PassCount = algorithm?.PassCount ?? 0,
-                    StartedAt = entryStart,
-                    CompletedAt = DateTimeOffset.Now,
-                    Status = job.Status,
-                    ErrorMessage = job.ErrorMessage,
-                });
-
-                if (_cts.IsCancellationRequested) break;
+                await RunFastRowsInParallelAsync(pendingRows, algorithmId, progress, entries, _cts.Token);
             }
-            ProgressText = _cts.IsCancellationRequested ? "已取消" : "完成";
+            else
+            {
+                foreach (var row in pendingRows)
+                {
+                    if (_cts.IsCancellationRequested) break;
+                    var entry = await ProcessRowForBatchAsync(row, algorithmId, progress, SynchronizationContext.Current, _cts.Token);
+                    entries.Add(entry);
+                    if (_cts.IsCancellationRequested) break;
+                }
+            }
+            UpdateBatchProgress(entries, _cts.IsCancellationRequested);
+            Volatile.Write(ref _acceptProgressUpdates, 0);
             ProgressPercent = _cts.IsCancellationRequested ? ProgressPercent : 100;
-            RemoveSuccessfulJobs();
+            RemoveCompletedJobs();
         }
         finally
         {
+            Volatile.Write(ref _acceptProgressUpdates, 0);
             IsBusy = false;
-            if (entries.Count > 0)
+            var entryList = entries.OrderBy(static e => e.StartedAt).ToList();
+            if (entryList.Count > 0)
             {
-                var report = BuildReport(entries, batchStart);
+                var report = BuildReport(entryList, batchStart);
                 try
                 {
                     var path = await _reportWriter.WriteAsync(report, CancellationToken.None);
@@ -164,6 +152,181 @@ public sealed partial class ShredPageViewModel : ObservableObject, IDisposable
                 }
             }
         }
+    }
+
+    private async Task RunFastRowsInParallelAsync(
+        IReadOnlyList<ShredJobRow> rows,
+        string? algorithmId,
+        IProgress<ShredProgress> progress,
+        ConcurrentBag<ShredAuditEntry> entries,
+        CancellationToken ct)
+    {
+        var uiContext = SynchronizationContext.Current;
+        var parallelism = ResolveFastParallelism();
+        using var semaphore = new SemaphoreSlim(parallelism, parallelism);
+
+        var tasks = rows.Select(row => RunFastRowWithThrottleAsync(
+            row,
+            algorithmId,
+            progress,
+            entries,
+            semaphore,
+            uiContext,
+            ct)).ToArray();
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task RunFastRowWithThrottleAsync(
+        ShredJobRow row,
+        string? algorithmId,
+        IProgress<ShredProgress> progress,
+        ConcurrentBag<ShredAuditEntry> entries,
+        SemaphoreSlim semaphore,
+        SynchronizationContext? uiContext,
+        CancellationToken ct)
+    {
+        try
+        {
+            await semaphore.WaitAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        try
+        {
+            if (ct.IsCancellationRequested) return;
+            var entry = await Task.Run(
+                () => ProcessRowForBatchAsync(row, algorithmId, progress, uiContext, ct),
+                CancellationToken.None);
+            entries.Add(entry);
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    [SuppressMessage("Design", "CA1031:DoNotCatchGeneralExceptionTypes",
+        Justification = "UI command boundary: a single job failure should be logged and stored without stopping the whole batch.")]
+    private async Task<ShredAuditEntry> ProcessRowForBatchAsync(
+        ShredJobRow row,
+        string? algorithmId,
+        IProgress<ShredProgress> progress,
+        SynchronizationContext? uiContext,
+        CancellationToken ct)
+    {
+        var job = row.BuildJob(algorithmId);
+        var entryStart = DateTimeOffset.Now;
+        IShredAlgorithm? algorithm = null;
+        try
+        {
+            algorithm = _shredService.PreviewAlgorithm(row.Path, job.AlgorithmId);
+        }
+        catch (InvalidOperationException)
+        {
+            // ShredAsync will surface the same configuration issue as the job failure.
+        }
+
+        try
+        {
+            RunOnContext(uiContext, () =>
+            {
+                row.Status = ShredJobStatus.Running;
+                ProgressState = "Running";
+                ProgressText = IsFastDeleteAlgorithm(algorithmId)
+                    ? $"正在快速粉碎 {row.Name}"
+                    : $"正在粉碎 {row.Name}";
+            });
+            await _shredService.ShredAsync(job, progress, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { RunOnContext(uiContext, () => row.SyncFrom(job)); }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Run job failed: {Path}", row.Path);
+        }
+
+        RunOnContext(uiContext, () => row.SyncFrom(job));
+
+        return new ShredAuditEntry
+        {
+            Path = row.Path,
+            IsDirectory = row.IsDirectory,
+            SizeBytes = row.SizeBytes,
+            AlgorithmId = algorithm?.Id ?? job.AlgorithmId,
+            AlgorithmName = algorithm?.Name,
+            PassCount = algorithm?.PassCount ?? 0,
+            StartedAt = entryStart,
+            CompletedAt = DateTimeOffset.Now,
+            Status = job.Status,
+            ErrorMessage = job.ErrorMessage,
+        };
+    }
+
+    private int ResolveFastParallelism()
+    {
+        var configured = _options.Io.MaxConcurrentFiles;
+        if (configured <= 1) configured = 4;
+        return Math.Clamp(configured, 1, 8);
+    }
+
+    private void UpdateBatchProgress(IEnumerable<ShredAuditEntry> entries, bool cancelled)
+    {
+        if (cancelled)
+        {
+            ProgressState = "Cancelled";
+            ProgressText = "已取消";
+            return;
+        }
+
+        var snapshot = entries.ToList();
+        if (snapshot.Count == 0)
+        {
+            ProgressState = "Idle";
+            ProgressText = "就绪";
+            return;
+        }
+
+        var successCount = snapshot.Count(static e => e.Status == ShredJobStatus.Success);
+        var failedCount = snapshot.Count(static e => e.Status == ShredJobStatus.Failed);
+        var cancelledCount = snapshot.Count(static e => e.Status == ShredJobStatus.Cancelled);
+
+        if (failedCount > 0)
+        {
+            ProgressState = "Failed";
+            var firstFailure = snapshot.FirstOrDefault(static e => e.Status == ShredJobStatus.Failed);
+            var reason = BuildFailureReason(firstFailure?.ErrorMessage);
+            ProgressText = $"{failedCount} 个失败，{reason}";
+            LastRunFailureReason = reason;
+            LastRunFailureMessage = $"失败原因：{reason}";
+            return;
+        }
+
+        if (cancelledCount > 0)
+        {
+            ProgressState = "Cancelled";
+            ProgressText = $"粉碎已取消：{cancelledCount} 个取消，{successCount} 个成功";
+            return;
+        }
+
+        ProgressState = "Success";
+        ProgressText = $"粉碎完成：成功 {successCount} 个";
+    }
+
+    private static bool IsFastDeleteAlgorithm(string? algorithmId) =>
+        string.Equals(algorithmId, ShredAlgorithmIds.FastDelete, StringComparison.OrdinalIgnoreCase);
+
+    private static void RunOnContext(SynchronizationContext? context, Action action)
+    {
+        if (context is null || context == SynchronizationContext.Current)
+        {
+            action();
+            return;
+        }
+
+        context.Send(_ => action(), null);
     }
 
     public void ShowHistory()
@@ -211,9 +374,33 @@ public sealed partial class ShredPageViewModel : ObservableObject, IDisposable
             : $"共 {HistoryItems.Count} 条记录，最近 {HistoryItems[0].CompletedAtText}";
     }
 
-    private void RemoveSuccessfulJobs()
+    private static string BuildFailureReason(string? rawReason)
     {
-        foreach (var row in Jobs.Where(static r => r.Status == ShredJobStatus.Success).ToList())
+        if (string.IsNullOrWhiteSpace(rawReason))
+        {
+            return "权限不足，请以管理员运行";
+        }
+
+        if (rawReason.Contains("占用", StringComparison.OrdinalIgnoreCase)
+            || rawReason.Contains("PID=", StringComparison.OrdinalIgnoreCase))
+        {
+            return "文件被占用，请以管理员运行";
+        }
+
+        if (rawReason.Contains("权限", StringComparison.OrdinalIgnoreCase)
+            || rawReason.Contains("UnauthorizedAccess", StringComparison.OrdinalIgnoreCase)
+            || rawReason.Contains("Access", StringComparison.OrdinalIgnoreCase)
+            || rawReason.Contains("denied", StringComparison.OrdinalIgnoreCase))
+        {
+            return "权限不足，请以管理员运行";
+        }
+
+        return rawReason;
+    }
+
+    private void RemoveCompletedJobs()
+    {
+        foreach (var row in Jobs.Where(static r => r.Status is ShredJobStatus.Success or ShredJobStatus.Failed).ToList())
         {
             Jobs.Remove(row);
         }
@@ -306,6 +493,19 @@ public sealed partial class ShredPageViewModel : ObservableObject, IDisposable
 
     private void OnProgress(ShredProgress p)
     {
+        if (Volatile.Read(ref _acceptProgressUpdates) == 0)
+        {
+            return;
+        }
+
+        if (p.PassCount <= 0)
+        {
+            ProgressState = "Running";
+            ProgressText = $"正在快速粉碎 {Path.GetFileName(p.FilePath)}";
+            return;
+        }
+
+        ProgressState = "Running";
         ProgressText = $"{Path.GetFileName(p.FilePath)} · pass {p.PassIndex}/{p.PassCount}";
         if (p.TotalBytes > 0)
             ProgressPercent = (double)p.BytesWritten / p.TotalBytes * 100;

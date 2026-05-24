@@ -8,4 +8,5 @@ public static class ShredAlgorithmIds
     public const string Purge7Pass   = "Purge-7Pass";
     public const string ZeroFill     = "ZeroFill";
     public const string CryptoErase  = "CryptoErase";
+    public const string FastDelete   = "FastDelete";
 }

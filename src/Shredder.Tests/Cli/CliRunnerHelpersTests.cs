@@ -29,6 +29,15 @@ public class CliRunnerHelpersTests
     }
 
     [Theory]
+    [InlineData("fast")]
+    [InlineData("quick")]
+    [InlineData("fastdelete")]
+    public void ResolveAlgorithmId_FastAliases_MapToFastDelete(string alias)
+    {
+        Assert.Equal(ShredAlgorithmIds.FastDelete, CliRunner.ResolveAlgorithmId(alias));
+    }
+
+    [Theory]
     [InlineData("dod3")]
     [InlineData("purge-3pass")]
     public void ResolveAlgorithmId_Dod3Aliases_MapToPurge3Pass(string alias)

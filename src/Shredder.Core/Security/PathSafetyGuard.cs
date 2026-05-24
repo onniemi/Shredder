@@ -5,7 +5,7 @@ namespace Shredder.Core.Security;
 
 /// <summary>
 /// 路径级安全护栏:把粉碎请求分级为 <see cref="PathSafetyLevel.Forbidden"/> / <see cref="PathSafetyLevel.Warn"/>
-/// / <see cref="PathSafetyLevel.Allowed"/>,UI 拿到结果再决定拦截 / 加确认 / 直接执行。
+/// / <see cref="PathSafetyLevel.Allowed"/>,调用方拿到结果后决定拦截或直接执行。
 /// </summary>
 /// <remarks>
 /// 决策顺序(从硬到软):
@@ -75,7 +75,7 @@ public sealed class PathSafetyGuard
 
         // 5. 警告路径
         if (Matches(full, _options.WarnPaths, out var warnedBy))
-            return new Decision(PathSafetyLevel.Warn, $"高风险路径,需要二次确认:{warnedBy}");
+            return new Decision(PathSafetyLevel.Warn, $"高风险路径:{warnedBy}");
 
         return new Decision(PathSafetyLevel.Allowed, string.Empty);
     }

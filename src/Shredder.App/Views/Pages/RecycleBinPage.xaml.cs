@@ -21,13 +21,6 @@ public partial class RecycleBinPage : Page
 
     private async void OnEmptyClick(object sender, RoutedEventArgs e)
     {
-        var result = MessageBox.Show(
-            "将先粉碎所有固定盘回收站中的文件，再调用系统接口清空。该操作不可恢复，确认继续？",
-            "Shredder",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No);
-        if (result != MessageBoxResult.Yes) return;
         await _vm.EmptyAsync();
     }
 

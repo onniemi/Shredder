@@ -29,15 +29,6 @@ public partial class FreeSpacePage : Page
             return;
         }
 
-        var name = _vm.SelectedDrive.Name;
-        var result = MessageBox.Show(
-            $"将向分区 {name} 写满数据以擦除空闲空间。操作期间该盘几乎无可用空间，可能影响系统稳定，确认继续？",
-            "Shredder",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No);
-        if (result != MessageBoxResult.Yes) return;
-
         await _vm.WipeAsync();
     }
 

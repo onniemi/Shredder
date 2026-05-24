@@ -206,8 +206,19 @@ public class FileSystemBoundaryTests
             lockHandle = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
 
             var algo = new RecordingAlgorithm();
+            var currentProcessLockResolver = new StubFileLockResolver(new[]
+            {
+                new FileLockResolver.LockingProcess(
+                    Environment.ProcessId,
+                    "testhost",
+                    FileLockResolver.AppType.MainWindow,
+                    false),
+            });
             // AllowScheduleOnRebootDelete = false 才能避免真实的 MoveFileEx 调用
-            var svc = BuildService(algo, allowScheduleOnReboot: false);
+            var svc = BuildService(
+                algo,
+                allowScheduleOnReboot: false,
+                lockResolver: currentProcessLockResolver);
 
             var job = new ShredJob { Path = path, IsDirectory = false };
 
@@ -231,6 +242,99 @@ public class FileSystemBoundaryTests
         }
     }
 
+    [Fact]
+    public async Task LockedFile_ByExternalWindowProcess_IsClosedThenShredded()
+    {
+        var path = Path.GetTempFileName();
+        var originalContent = new byte[] { 0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE };
+        await File.WriteAllBytesAsync(path, originalContent);
+
+        using var locker = StartLockingProcess(path);
+        try
+        {
+            var algo = new RecordingAlgorithm();
+            var lockResolver = new StubFileLockResolver(new[]
+            {
+                new FileLockResolver.LockingProcess(
+                    locker.Process.Id,
+                    "notepad-like-locker",
+                    FileLockResolver.AppType.MainWindow,
+                    false),
+            });
+            var svc = BuildService(
+                algo,
+                allowScheduleOnReboot: false,
+                lockResolver: lockResolver);
+
+            var job = new ShredJob { Path = path, IsDirectory = false };
+
+            await svc.ShredAsync(job, null, CancellationToken.None);
+
+            Assert.Equal(ShredJobStatus.Success, job.Status);
+            Assert.False(File.Exists(path));
+            Assert.True(algo.FullyCompleted, "释放外部占用进程后应继续执行真实覆写粉碎。");
+            Assert.True(locker.Process.HasExited || locker.Process.WaitForExit(5_000));
+        }
+        finally
+        {
+            locker.Dispose();
+            if (File.Exists(path))
+            {
+                try { File.SetAttributes(path, FileAttributes.Normal); }
+                catch { /* ignored */ }
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task FastDelete_LockedFile_ByExternalWindowProcess_IsClosedThenDeleted()
+    {
+        var path = Path.GetTempFileName();
+        await File.WriteAllBytesAsync(path, new byte[2 * 1024 * 1024]);
+
+        using var locker = StartLockingProcess(path);
+        try
+        {
+            var lockResolver = new StubFileLockResolver(new[]
+            {
+                new FileLockResolver.LockingProcess(
+                    locker.Process.Id,
+                    "fast-delete-locker",
+                    FileLockResolver.AppType.MainWindow,
+                    false),
+            });
+            var svc = BuildService(
+                new FastDeleteAlgorithm(),
+                allowScheduleOnReboot: false,
+                lockResolver: lockResolver);
+
+            var job = new ShredJob
+            {
+                Path = path,
+                IsDirectory = false,
+                SizeBytes = new FileInfo(path).Length,
+                AlgorithmId = ShredAlgorithmIds.FastDelete,
+            };
+
+            await svc.ShredAsync(job, null, CancellationToken.None);
+
+            Assert.Equal(ShredJobStatus.Success, job.Status);
+            Assert.False(File.Exists(path));
+            Assert.True(locker.Process.HasExited || locker.Process.WaitForExit(5_000));
+        }
+        finally
+        {
+            locker.Dispose();
+            if (File.Exists(path))
+            {
+                try { File.SetAttributes(path, FileAttributes.Normal); }
+                catch { /* ignored */ }
+                File.Delete(path);
+            }
+        }
+    }
+
     // -------------------- helpers --------------------
 
     /// <summary>
@@ -240,7 +344,8 @@ public class FileSystemBoundaryTests
     /// </summary>
     private static ShredService BuildService(
         IShredAlgorithm algorithm,
-        bool allowScheduleOnReboot = true)
+        bool allowScheduleOnReboot = true,
+        FileLockResolver? lockResolver = null)
     {
         var opts = Options.Create(new ShredderOptions
         {
@@ -257,9 +362,82 @@ public class FileSystemBoundaryTests
             opts,
             new PathSafetyGuard(opts),
             new MftResidencyHandler(safety.MftResidentInflateThresholdBytes, safety.MftResidentInflateTargetBytes),
-            new FileLockResolver(),
+            lockResolver ?? new FileLockResolver(),
             new SsdDetector(),
             NullLogger<ShredService>.Instance);
+    }
+
+    private static LockingProcessHandle StartLockingProcess(string path)
+    {
+        var script = string.Join(
+            " ",
+            "$path=$env:SHREDDER_LOCK_PATH;",
+            "$fs=[System.IO.File]::Open($path,[System.IO.FileMode]::Open,[System.IO.FileAccess]::Read,[System.IO.FileShare]::Read);",
+            "try { Start-Sleep -Seconds 600 } finally { $fs.Dispose() }");
+        var psi = new ProcessStartInfo("powershell.exe")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        psi.ArgumentList.Add("-NoProfile");
+        psi.ArgumentList.Add("-ExecutionPolicy");
+        psi.ArgumentList.Add("Bypass");
+        psi.ArgumentList.Add("-Command");
+        psi.ArgumentList.Add(script);
+        psi.Environment["SHREDDER_LOCK_PATH"] = path;
+
+        var process = Process.Start(psi)
+            ?? throw new InvalidOperationException("Failed to start locking process.");
+        try
+        {
+            WaitUntilFileIsLocked(path, process);
+            return new LockingProcessHandle(process);
+        }
+        catch
+        {
+            TryKill(process);
+            process.Dispose();
+            throw;
+        }
+    }
+
+    private static void WaitUntilFileIsLocked(string path, Process process)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (process.HasExited)
+            {
+                var output = process.StandardOutput.ReadToEnd();
+                var error = process.StandardError.ReadToEnd();
+                throw new InvalidOperationException(
+                    $"Locking process exited before opening the file. ExitCode={process.ExitCode}; Output={output}; Error={error}");
+            }
+
+            if (IsExclusiveWriteBlocked(path))
+            {
+                return;
+            }
+
+            Thread.Sleep(100);
+        }
+
+        throw new InvalidOperationException("Locking process did not lock the file in time.");
+    }
+
+    private static bool IsExclusiveWriteBlocked(string path)
+    {
+        try
+        {
+            using var _ = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.None);
+            return false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return true;
+        }
     }
 
     private static bool TryCreateAds(string mainPath, string adsName, string content)
@@ -375,5 +553,46 @@ public class FileSystemBoundaryTests
             IProgress<ShredProgress>? progress,
             CancellationToken ct)
             => throw _toThrow;
+    }
+
+    private sealed class StubFileLockResolver : FileLockResolver
+    {
+        private readonly IReadOnlyList<LockingProcess> _processes;
+
+        public StubFileLockResolver(IReadOnlyList<LockingProcess> processes)
+        {
+            _processes = processes;
+        }
+
+        public override IReadOnlyList<LockingProcess> GetLockingProcesses(string filePath) => _processes;
+    }
+
+    private sealed class LockingProcessHandle : IDisposable
+    {
+        public LockingProcessHandle(Process process)
+        {
+            Process = process;
+        }
+
+        public Process Process { get; }
+
+        public void Dispose()
+        {
+            TryKill(Process);
+            Process.Dispose();
+        }
+    }
+
+    private static void TryKill(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit(5_000);
+            }
+        }
+        catch (InvalidOperationException) { }
     }
 }

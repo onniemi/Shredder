@@ -20,7 +20,7 @@
             <ui:TextBlock Grid.Row="0" Margin="0,32,0,0" FontTypography="Body" Appearance="Tertiary"
                           Text="只保留日常需要调整的选项。安全策略继续由默认配置托管。"/>
 
-            <ui:CardExpander Grid.Row="1" Margin="0,16,0,0" Icon="{ui:SymbolIcon DarkTheme24}" IsExpanded="True"
+            <ui:CardExpander Grid.Row="1" Margin="0,16,0,0" Icon="{ui:SymbolIcon DarkTheme24}" IsExpanded="False"
                              Header="常规">
                 <StackPanel>
                     <Grid Margin="0,4">
@@ -44,7 +44,7 @@
                                   DisplayMemberPath="Name"
                                   SelectedItem="{Binding DefaultAlgorithm, Mode=TwoWay}"/>
                         <ui:TextBlock Grid.Column="2" Margin="12,0,0,0" Appearance="Tertiary" VerticalAlignment="Center"
-                                      Text="普通文件直接粉碎；系统和高风险路径仍会被拦截或确认。"/>
+                                      Text="普通文件直接粉碎；系统和禁止路径仍会被拦截。"/>
                     </Grid>
                 </StackPanel>
             </ui:CardExpander>
@@ -74,10 +74,10 @@
             </ui:CardExpander>
 
             <ui:CardExpander Grid.Row="3" Margin="0,12,0,0" Icon="{ui:SymbolIcon AppFolder24}"
-                             Header="右键菜单" IsExpanded="True">
+                             Header="右键菜单" IsExpanded="False">
                 <StackPanel>
-                    <ui:TextBlock FontTypography="Body" Appearance="Tertiary"
-                                  Text="把「粉碎一切」加入文件和文件夹右键菜单。仅写入当前用户配置。"/>
+                    <ui:TextBlock FontTypography="Body" Appearance="Tertiary" TextWrapping="Wrap"
+                                  Text="把「粉碎一切」加入文件和文件夹右键菜单。右键选择文件或文件夹后会打开软件，并自动加入粉碎列表。仅写入当前用户配置。"/>
                     <Grid Margin="0,10,0,4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="180"/>

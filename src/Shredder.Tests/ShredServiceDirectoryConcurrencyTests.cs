@@ -71,6 +71,36 @@ public class ShredServiceDirectoryConcurrencyTests
         }
     }
 
+    [Theory]
+    [InlineData(1, 4)]
+    [InlineData(3, 3)]
+    [InlineData(99, 8)]
+    public void FastDelete_Concurrency_IsBoostedAndCapped(int configured, int expected)
+    {
+        var svc = ShredService.CreateForTests(
+            new IShredAlgorithm[] { new FastDeleteAlgorithm() },
+            defaultId: ShredAlgorithmIds.FastDelete,
+            ssdDefault: null,
+            ssdDetector: null,
+            maxConcurrentFiles: configured);
+
+        Assert.Equal(expected, svc.ResolveFileConcurrency(new FastDeleteAlgorithm()));
+    }
+
+    [Fact]
+    public void OverwriteAlgorithm_Concurrency_UsesConfiguredValue()
+    {
+        var algo = new ConcurrencyTrackingAlgorithm(blockMs: 1);
+        var svc = ShredService.CreateForTests(
+            new IShredAlgorithm[] { algo },
+            defaultId: algo.Id,
+            ssdDefault: null,
+            ssdDetector: null,
+            maxConcurrentFiles: 1);
+
+        Assert.Equal(1, svc.ResolveFileConcurrency(algo));
+    }
+
     [Fact]
     public async Task MaxConcurrentFiles_Cancellation_StopsRemainingFiles()
     {

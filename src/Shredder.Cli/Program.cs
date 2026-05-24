@@ -493,8 +493,8 @@ namespace Shredder.Cli
         }
 
         /// <summary>
-        /// 用户友好的算法别名:dod3 / dod7 / single / random / zero / crypto / clear。
-        /// 也接受原始算法 ID(Purge-3Pass / Purge-7Pass / Clear / ZeroFill / CryptoErase)。
+        /// 用户友好的算法别名:fast / dod3 / dod7 / single / random / zero / crypto / clear。
+        /// 也接受原始算法 ID(FastDelete / Purge-3Pass / Purge-7Pass / Clear / ZeroFill / CryptoErase)。
         /// 返回 null 时由 ShredService 根据 SSD 检测自行选默认算法。
         /// </summary>
         internal static string? ResolveAlgorithmId(string? userAlias)
@@ -502,6 +502,7 @@ namespace Shredder.Cli
             if (string.IsNullOrWhiteSpace(userAlias)) return null;
             return userAlias.Trim().ToLowerInvariant() switch
             {
+                "fast" or "quick" or "fastdelete" => ShredAlgorithmIds.FastDelete,
                 "dod3" or "purge-3pass"          => ShredAlgorithmIds.Purge3Pass,
                 "dod7" or "purge-7pass"          => ShredAlgorithmIds.Purge7Pass,
                 "single" or "random" or "clear"  => ShredAlgorithmIds.Clear,
@@ -543,13 +544,14 @@ namespace Shredder.Cli
                   {exe} --help | --version
 
                 算法别名(--algo):
-                  dod3        DoD 5220.22-M 3 趟        (HDD 默认)
-                  dod7        DoD 5220.22-M 7 趟        (高度敏感数据)
+                  fast        快速粉碎:截断 + 随机改名 + 删除(适合大批量/大文件快速处理)
+                  dod3        DoD 5220.22-M 3 趟
+                  dod7        DoD 5220.22-M 7 趟        (HDD 默认,更强但更慢)
                   single      单趟随机覆写              (快速,SSD 友好)
                   zero        单趟全零覆写              (TRIM 友好)
                   crypto      加密擦除                  (SSD/NVMe 默认)
-                  也可直接传 ID:Purge-3Pass / Purge-7Pass / Clear / ZeroFill / CryptoErase
-                  省略时,SSD 走 CryptoErase,HDD/未知走 Purge-3Pass。
+                  也可直接传 ID:FastDelete / Purge-3Pass / Purge-7Pass / Clear / ZeroFill / CryptoErase
+                  省略时,SSD 走 CryptoErase,HDD/未知走 Purge-7Pass。
 
                 选项:
                   -y, --yes              跳过二次确认(脚本/自动化场景)

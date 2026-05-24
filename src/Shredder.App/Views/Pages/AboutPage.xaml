@@ -3,7 +3,10 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="关于">
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer x:Name="AboutScrollViewer"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  PreviewMouseWheel="OnAboutMouseWheel">
         <Grid Margin="16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -26,7 +29,7 @@
             </StackPanel>
 
             <!-- 版本卡 -->
-            <ui:CardExpander Grid.Row="1" Margin="0,16,0,0" Icon="{ui:SymbolIcon Info24}" IsExpanded="True"
+            <ui:CardExpander Grid.Row="1" Margin="0,16,0,0" Icon="{ui:SymbolIcon Info24}" IsExpanded="False"
                              Header="版本信息">
                 <Grid Margin="0,4">
                     <Grid.ColumnDefinitions>
@@ -64,7 +67,7 @@
             </ui:CardExpander>
 
             <!-- 项目与许可 -->
-            <ui:CardExpander Grid.Row="2" Margin="0,12,0,0" Icon="{ui:SymbolIcon Document24}" IsExpanded="True"
+            <ui:CardExpander Grid.Row="2" Margin="0,12,0,0" Icon="{ui:SymbolIcon Document24}" IsExpanded="False"
                              Header="项目 / 许可">
                 <StackPanel>
                     <Grid Margin="0,4">
@@ -92,7 +95,7 @@
             </ui:CardExpander>
 
             <!-- 第三方组件 -->
-            <ui:CardExpander Grid.Row="3" Margin="0,12,0,0" Icon="{ui:SymbolIcon Box24}" IsExpanded="True"
+            <ui:CardExpander Grid.Row="3" Margin="0,12,0,0" Icon="{ui:SymbolIcon Box24}" IsExpanded="False"
                              Header="第三方组件 (Third-Party Notices)">
                 <ListView ItemsSource="{Binding ThirdPartyNotices}" BorderThickness="0">
                     <ListView.View>
@@ -106,7 +109,7 @@
             </ui:CardExpander>
 
             <!-- 诊断 -->
-            <ui:CardExpander Grid.Row="4" Margin="0,12,0,0" Icon="{ui:SymbolIcon Bug24}" IsExpanded="True"
+            <ui:CardExpander Grid.Row="4" Margin="0,12,0,0" Icon="{ui:SymbolIcon Bug24}" IsExpanded="False"
                              Header="诊断 / 排错">
                 <StackPanel>
                     <ui:TextBlock FontTypography="Body" Appearance="Tertiary" TextWrapping="Wrap"
@@ -129,10 +132,10 @@
 
             <!-- 安全声明 -->
             <ui:CardExpander Grid.Row="5" Margin="0,12,0,0" Icon="{ui:SymbolIcon ShieldCheckmark24}"
-                             Header="安全声明" IsExpanded="True">
+                             Header="安全声明" IsExpanded="False">
                 <StackPanel>
                     <ui:TextBlock FontTypography="Body" TextWrapping="Wrap"
-                                  Text="本程序的擦除操作不可恢复。请在执行前再次确认目标路径与算法。"/>
+                                  Text="本程序的擦除操作不可恢复。执行前请自行确认目标路径与算法。"/>
                     <ui:TextBlock Margin="0,8,0,0" FontTypography="Body" Appearance="Tertiary" TextWrapping="Wrap"
                                   Text="作者不对数据丢失承担责任。本程序按「原样」提供,详见 LICENSE。"/>
                 </StackPanel>

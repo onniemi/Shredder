@@ -42,14 +42,20 @@
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
-            <ui:Button Grid.Column="2"
-                       Content="一键粉碎"
-                       Appearance="Primary"
-                       Padding="26,8"
-                       MinWidth="96"
-                       VerticalAlignment="Center"
-                       IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"
-                       Click="OnStartClick"/>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:Button Content="快速粉碎"
+                           Padding="18,8"
+                           MinWidth="96"
+                           IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"
+                           Click="OnFastStartClick"/>
+                <ui:Button Content="强力粉碎"
+                           Appearance="Primary"
+                           Padding="22,8"
+                           MinWidth="96"
+                           Margin="8,0,0,0"
+                           IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"
+                           Click="OnStartClick"/>
+            </StackPanel>
         </Grid>
 
         <Border Grid.Row="1" Margin="0,28,0,0"
@@ -162,11 +168,56 @@
                     VerticalAlignment="Center"
                     Click="OnOpenLastReportClick"/>
 
-            <ui:TextBlock Grid.Column="1"
-                          Margin="12,0,0,0"
-                          VerticalAlignment="Center"
-                          Appearance="Tertiary"
-                          Text="{Binding ProgressText}"/>
+            <Border Grid.Column="1"
+                    Margin="12,0,12,0"
+                    Padding="10,6"
+                    MinHeight="30"
+                    CornerRadius="4"
+                    VerticalAlignment="Center"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1">
+                <Border.Style>
+                    <Style TargetType="{x:Type Border}">
+                        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+                        <Setter Property="TextElement.Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ProgressState}" Value="Running">
+                                <Setter Property="Background" Value="#33219E34"/>
+                                <Setter Property="BorderBrush" Value="#FF21A33A"/>
+                                <Setter Property="TextElement.Foreground" Value="#FF7CFF8B"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ProgressState}" Value="Success">
+                                <Setter Property="Background" Value="#33219E34"/>
+                                <Setter Property="BorderBrush" Value="#FF21A33A"/>
+                                <Setter Property="TextElement.Foreground" Value="#FF7CFF8B"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ProgressState}" Value="Failed">
+                                <Setter Property="Background" Value="#44D83B01"/>
+                                <Setter Property="BorderBrush" Value="#FFFF5A36"/>
+                                <Setter Property="TextElement.Foreground" Value="#FFFFB3A5"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ProgressState}" Value="Cancelled">
+                                <Setter Property="Background" Value="#33FFB020"/>
+                                <Setter Property="BorderBrush" Value="#FFFFB020"/>
+                                <Setter Property="TextElement.Foreground" Value="#FFFFD27A"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="Info24"
+                                   Width="18"
+                                   Height="18"
+                                   Margin="0,0,8,0"
+                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Border}}}"/>
+                    <TextBlock Text="{Binding ProgressText}"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Border}}}"/>
+                </StackPanel>
+            </Border>
 
             <Button Grid.Column="2"
                     Content="添加文件"

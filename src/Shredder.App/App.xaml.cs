@@ -83,6 +83,7 @@ public partial class App : Application
             ApplyConfiguredTheme();
 
             var main = _host.Services.GetRequiredService<MainWindow>();
+            main.AddStartupPaths(e.Args);
             main.Show();
 
             base.OnStartup(e);

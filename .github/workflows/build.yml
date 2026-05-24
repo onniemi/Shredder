@@ -100,14 +100,26 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
-          Compress-Archive -Path publish/simple-ui-full/* `
-            -DestinationPath shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
-          Compress-Archive -Path publish/simple-ui-light/* `
-            -DestinationPath shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
-          Compress-Archive -Path publish/standard-ui-full/* `
-            -DestinationPath shredder-standard-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
-          Compress-Archive -Path publish/standard-ui-light/* `
-            -DestinationPath shredder-standard-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
+          $packages = @(
+            @{ Source = 'publish/simple-ui-light';    Folder = 'shredder_simple';       Zip = 'shredder_simple.zip';       Exe = 'shredder_simple.exe' },
+            @{ Source = 'publish/simple-ui-full';     Folder = 'shredder_simple_net10'; Zip = 'shredder_simple_net10.zip'; Exe = 'shredder_simple.exe' },
+            @{ Source = 'publish/standard-ui-light';  Folder = 'shredder_full';         Zip = 'shredder_full.zip';         Exe = 'shredder_full.exe' },
+            @{ Source = 'publish/standard-ui-full';   Folder = 'shredder_full_net10';   Zip = 'shredder_full_net10.zip';   Exe = 'shredder_full.exe' }
+          )
+
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+
+          foreach ($package in $packages) {
+            $folderPath = Join-Path 'release' $package.Folder
+            if (Test-Path -LiteralPath $folderPath) {
+              Remove-Item -LiteralPath $folderPath -Recurse -Force
+            }
+
+            New-Item -ItemType Directory -Path $folderPath -Force | Out-Null
+            Copy-Item -Path (Join-Path $package.Source '*') -Destination $folderPath -Recurse -Force
+            Move-Item -LiteralPath (Join-Path $folderPath 'Shredder.exe') -Destination (Join-Path $folderPath $package.Exe) -Force
+            Compress-Archive -Path $folderPath -DestinationPath (Join-Path 'release' $package.Zip) -Force
+          }
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -117,19 +129,19 @@ jobs:
           body: |
             ## 下载哪个版本
 
-            - `shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip`:简约界面,自带 .NET 10,体积大
-            - `shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip`:简约界面,需要已安装 .NET 10 Desktop Runtime,体积小
-            - `shredder-standard-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip`:完整图形界面,自带 .NET 10,体积大
-            - `shredder-standard-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip`:完整图形界面,需要已安装 .NET 10 Desktop Runtime,体积小
+            - `shredder_simple.zip`:简约界面,需要已安装 .NET 10 Desktop Runtime,体积小,解压后运行 `shredder_simple.exe`
+            - `shredder_simple_net10.zip`:简约界面,自带 .NET 10,体积大,解压后运行 `shredder_simple.exe`
+            - `shredder_full.zip`:完整图形界面,需要已安装 .NET 10 Desktop Runtime,体积小,解压后运行 `shredder_full.exe`
+            - `shredder_full_net10.zip`:完整图形界面,自带 .NET 10,体积大,解压后运行 `shredder_full.exe`
 
-            拿不准就下载 `simple-ui full`。已经安装 .NET 10 Desktop Runtime 的用户可下载 `light` 小体积版。
+            拿不准就下载 `shredder_simple_net10.zip`。已经安装 .NET 10 Desktop Runtime 的用户可下载不带 `_net10` 的小体积版。
 
             GitHub 自动附带的 `Source code` 是源码包，普通用户不用下载。
           files: |
-            shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
-            shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
-            shredder-standard-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
-            shredder-standard-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
+            release/shredder_simple.zip
+            release/shredder_simple_net10.zip
+            release/shredder_full.zip
+            release/shredder_full_net10.zip
 
       - name: Update release notes
         if: startsWith(github.ref, 'refs/tags/v')
@@ -143,12 +155,12 @@ jobs:
             const body = [
               '## 下载哪个版本',
               '',
-              `- \`shredder-simple-ui-v${version}-win-x64-full.zip\`:简约界面,自带 .NET 10,体积大`,
-              `- \`shredder-simple-ui-v${version}-win-x64-light.zip\`:简约界面,需要已安装 .NET 10 Desktop Runtime,体积小`,
-              `- \`shredder-standard-ui-v${version}-win-x64-full.zip\`:完整图形界面,自带 .NET 10,体积大`,
-              `- \`shredder-standard-ui-v${version}-win-x64-light.zip\`:完整图形界面,需要已安装 .NET 10 Desktop Runtime,体积小`,
+              '- `shredder_simple.zip`:简约界面,需要已安装 .NET 10 Desktop Runtime,体积小,解压后运行 `shredder_simple.exe`',
+              '- `shredder_simple_net10.zip`:简约界面,自带 .NET 10,体积大,解压后运行 `shredder_simple.exe`',
+              '- `shredder_full.zip`:完整图形界面,需要已安装 .NET 10 Desktop Runtime,体积小,解压后运行 `shredder_full.exe`',
+              '- `shredder_full_net10.zip`:完整图形界面,自带 .NET 10,体积大,解压后运行 `shredder_full.exe`',
               '',
-              '拿不准就下载 `simple-ui full`。已经安装 .NET 10 Desktop Runtime 的用户可下载 `light` 小体积版。',
+              '拿不准就下载 `shredder_simple_net10.zip`。已经安装 .NET 10 Desktop Runtime 的用户可下载不带 `_net10` 的小体积版。',
               '',
               'GitHub 自动附带的 `Source code` 是源码包,普通用户不用下载。',
             ].join('\n');
@@ -172,12 +184,11 @@ jobs:
         with:
           script: |
             const tag = context.ref.replace('refs/tags/', '');
-            const version = tag.replace(/^v/, '');
             const keep = new Set([
-              `shredder-simple-ui-v${version}-win-x64-full.zip`,
-              `shredder-simple-ui-v${version}-win-x64-light.zip`,
-              `shredder-standard-ui-v${version}-win-x64-full.zip`,
-              `shredder-standard-ui-v${version}-win-x64-light.zip`,
+              'shredder_simple.zip',
+              'shredder_simple_net10.zip',
+              'shredder_full.zip',
+              'shredder_full_net10.zip',
             ]);
             const { data: release } = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,

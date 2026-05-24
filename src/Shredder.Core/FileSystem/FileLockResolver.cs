@@ -12,7 +12,7 @@ namespace Shredder.Core.FileSystem;
 /// 本类只查询,不强杀进程。结果展示在 UI 上,由用户决定是关闭进程、跳过文件,
 /// 还是走「重启后删除」(MoveFileEx + MOVEFILE_DELAY_UNTIL_REBOOT)的路径。
 /// </remarks>
-public sealed class FileLockResolver
+public class FileLockResolver
 {
     /// <summary>占用方类型。映射自 Restart Manager 的 <c>RM_APP_TYPE</c>。</summary>
     public enum AppType
@@ -38,7 +38,7 @@ public sealed class FileLockResolver
     /// 若 RM 会话创建失败或文件未被占用,返回空集合;不会抛异常。
     /// </summary>
     [SuppressMessage("Performance", "CA1822", Justification = "Registered as DI singleton; keeping instance method for future logger injection.")]
-    public IReadOnlyList<LockingProcess> GetLockingProcesses(string filePath)
+    public virtual IReadOnlyList<LockingProcess> GetLockingProcesses(string filePath)
     {
         var result = new List<LockingProcess>();
         if (string.IsNullOrEmpty(filePath)) return result;

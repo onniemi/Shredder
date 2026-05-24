@@ -1,3 +1,4 @@
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -44,6 +45,27 @@ public partial class MainWindow : FluentWindow
         ShowPage(_shredPage);
 #endif
         SourceInitialized += OnSourceInitialized;
+    }
+
+    public void AddStartupPaths(IEnumerable<string> paths)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        var added = false;
+        foreach (var path in paths)
+        {
+            if (string.IsNullOrWhiteSpace(path)) continue;
+            if (!File.Exists(path) && !Directory.Exists(path)) continue;
+            _shredPage.AddPathFromShellDrop(path);
+            added = true;
+        }
+
+        if (!added) return;
+
+#if SIMPLE_UI
+        SimpleFrame.Content = _shredPage;
+#else
+        ShowPage(_shredPage);
+#endif
     }
 
     private void OnShowShredClick(object sender, RoutedEventArgs e) => ShowPage(_shredPage);
