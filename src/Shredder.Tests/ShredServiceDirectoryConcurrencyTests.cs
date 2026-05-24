@@ -45,8 +45,8 @@ public class ShredServiceDirectoryConcurrencyTests
     [Fact]
     public async Task MaxConcurrentFiles_Three_AllowsParallelButRespectsCeiling()
     {
-        // 序号:8 个文件 + concurrency=3,应观察到峰值并发 >1 且不超过 3。
-        var algo = new ConcurrencyTrackingAlgorithm(blockMs: 80);
+        // 序号:8 个文件 + concurrency=3,应稳定观察到 3 个文件同时进入算法,且不超过 3。
+        var algo = new ConcurrencyTrackingAlgorithm(blockMs: 10, releaseWhenConcurrent: 3);
         var dir = CreateTempTree(fileCount: 8);
         try
         {
@@ -62,7 +62,7 @@ public class ShredServiceDirectoryConcurrencyTests
 
             Assert.Equal(ShredJobStatus.Success, job.Status);
             Assert.Equal(8, algo.TotalInvocations);
-            Assert.InRange(algo.PeakConcurrency, 2, 3);
+            Assert.Equal(3, algo.PeakConcurrency);
             Assert.False(Directory.Exists(dir));
         }
         finally
@@ -155,32 +155,39 @@ public class ShredServiceDirectoryConcurrencyTests
         return root;
     }
 
-    /// <summary>
-    /// 算法骨架:每次进入 <see cref="FillBuffer"/> 时把并发计数 +1,延时模拟磁盘 I/O,
-    /// 离开时 -1,过程中记录峰值。 用作"是否真的并发"的观测端。
-    /// </summary>
-    private sealed class ConcurrencyTrackingAlgorithm : ShredAlgorithmBase
+    private sealed class ConcurrencyTrackingAlgorithm : IShredAlgorithm
     {
         private readonly int _blockMs;
+        private readonly int? _releaseWhenConcurrent;
         private readonly Action<int>? _onInvocation;
+        private readonly TaskCompletionSource _releaseGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int _currentConcurrent;
         private int _peak;
         private int _invocations;
         private readonly object _gate = new();
 
-        public ConcurrencyTrackingAlgorithm(int blockMs, Action<int>? onInvocation = null)
+        public ConcurrencyTrackingAlgorithm(
+            int blockMs,
+            int? releaseWhenConcurrent = null,
+            Action<int>? onInvocation = null)
         {
             _blockMs = blockMs;
+            _releaseWhenConcurrent = releaseWhenConcurrent;
             _onInvocation = onInvocation;
         }
 
-        public override string Id => "concurrency-tracker";
-        public override string Name => "ConcurrencyTracker";
-        public override int PassCount => 1;
+        public string Id => "concurrency-tracker";
+        public string Name => "ConcurrencyTracker";
+        public int PassCount => 1;
         public int TotalInvocations => Volatile.Read(ref _invocations);
         public int PeakConcurrency => Volatile.Read(ref _peak);
 
-        protected override void FillBuffer(int passIndex, byte[] buffer, int count)
+        public async Task ShredAsync(
+            Stream stream,
+            long length,
+            string filePath,
+            IProgress<ShredProgress>? progress,
+            CancellationToken ct)
         {
             int cur = Interlocked.Increment(ref _currentConcurrent);
             int invocationIndex = Interlocked.Increment(ref _invocations);
@@ -191,13 +198,37 @@ public class ShredServiceDirectoryConcurrencyTests
             try
             {
                 _onInvocation?.Invoke(invocationIndex);
-                // 模拟磁盘耗时,确保多线程可观察到峰值并发
-                Thread.Sleep(_blockMs);
-                Array.Fill(buffer, (byte)0xCD, 0, count);
+                await WaitForConcurrentEntrantsIfNeededAsync(cur, ct);
+                await Task.Delay(_blockMs, ct);
+
+                if (length > 0)
+                {
+                    stream.Seek(0, SeekOrigin.Begin);
+                    await stream.WriteAsync(new byte[] { 0xCD }, ct);
+                    progress?.Report(new ShredProgress(filePath, 1, 1, length, length));
+                }
             }
             finally
             {
                 Interlocked.Decrement(ref _currentConcurrent);
+            }
+        }
+
+        private async Task WaitForConcurrentEntrantsIfNeededAsync(int currentConcurrency, CancellationToken ct)
+        {
+            if (_releaseWhenConcurrent is null) return;
+            if (currentConcurrency >= _releaseWhenConcurrent.Value)
+            {
+                _releaseGate.TrySetResult();
+                return;
+            }
+
+            var timeout = Task.Delay(TimeSpan.FromSeconds(5), ct);
+            var completed = await Task.WhenAny(_releaseGate.Task, timeout);
+            if (completed == timeout)
+            {
+                throw new TimeoutException(
+                    $"等待并发进入超时:当前峰值 {PeakConcurrency},目标 {_releaseWhenConcurrent.Value}。");
             }
         }
     }
