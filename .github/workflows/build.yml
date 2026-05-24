@@ -123,39 +123,50 @@ jobs:
           Compress-Archive -Path publish/app-simple/* `
             -DestinationPath shredder-app-v${{ steps.ver.outputs.version }}-win-x64-simple.zip
 
-      - name: Compute SHA-256 checksums
-        if: startsWith(github.ref, 'refs/tags/v')
-        # 输出格式与 GNU `sha256sum` 兼容:`<hex>  <filename>\n`,用户可 `sha256sum -c xxx.sha256` 校验。
-        # 必须 ASCII 编码(无 BOM)+ LF 行尾;Out-File 会写 CRLF,导致 GNU sha256sum 把 \r 当文件名一部分,
-        # 所以用 [System.IO.File]::WriteAllText 显式控制编码和换行。
-        shell: pwsh
-        run: |
-          $zips = @(
-            "shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-full.zip",
-            "shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-light.zip",
-            "shredder-app-v${{ steps.ver.outputs.version }}-win-x64-full.zip",
-            "shredder-app-v${{ steps.ver.outputs.version }}-win-x64-light.zip",
-            "shredder-app-v${{ steps.ver.outputs.version }}-win-x64-simple.zip"
-          )
-          foreach ($zip in $zips) {
-            $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-            [System.IO.File]::WriteAllText("$zip.sha256", "$hash  $zip`n", [System.Text.Encoding]::ASCII)
-            Write-Host "$zip SHA-256: $hash"
-          }
-
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          generate_release_notes: false
+          body: |
+            ## 下载哪个版本
+
+            | 文件 | 适合谁 | 说明 |
+            | --- | --- | --- |
+            | `shredder-app-v${{ steps.ver.outputs.version }}-win-x64-simple.zip` | 只想要最简单界面的用户 | WPF 简约界面，只显示文件/文件夹粉碎，自带 .NET 10 桌面运行时 |
+            | `shredder-app-v${{ steps.ver.outputs.version }}-win-x64-full.zip` | 想保留完整图形界面的用户 | WPF 完整界面，内置 .NET 10 桌面运行时，体积较大 |
+            | `shredder-app-v${{ steps.ver.outputs.version }}-win-x64-light.zip` | 已安装 .NET 10 Desktop Runtime 的用户 | WPF 完整界面，体积小，需要本机已有运行时 |
+            | `shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-full.zip` | 脚本/服务器/远程环境 | 命令行版，内置 .NET 10 运行时 |
+            | `shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-light.zip` | 已安装 .NET 10 Runtime 的脚本用户 | 命令行版，体积小，需要本机已有运行时 |
+
+            拿不准就下载 `app simple`。想要完整界面就下载 `app full`；想要最小体积，并且已经安装运行时，就下载 `light`。
+
+            GitHub 自动附带的 `Source code` 是源码包，普通用户不用下载。
           files: |
             shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-full.zip
             shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-light.zip
             shredder-app-v${{ steps.ver.outputs.version }}-win-x64-full.zip
             shredder-app-v${{ steps.ver.outputs.version }}-win-x64-light.zip
             shredder-app-v${{ steps.ver.outputs.version }}-win-x64-simple.zip
-            shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-full.zip.sha256
-            shredder-cli-v${{ steps.ver.outputs.version }}-win-x64-light.zip.sha256
-            shredder-app-v${{ steps.ver.outputs.version }}-win-x64-full.zip.sha256
-            shredder-app-v${{ steps.ver.outputs.version }}-win-x64-light.zip.sha256
-            shredder-app-v${{ steps.ver.outputs.version }}-win-x64-simple.zip.sha256
+
+      - name: Remove old checksum assets
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag,
+            });
+
+            for (const asset of release.assets) {
+              if (!asset.name.endsWith('.sha256')) continue;
+
+              await github.rest.repos.deleteReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                asset_id: asset.id,
+              });
+            }
