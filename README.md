@@ -8,14 +8,14 @@ Windows 平台的安全文件粉碎工具 · C# / .NET 10 / WPF
 
 ## 下载哪个版本
 
-GitHub Release 提供简约界面和完整图形界面,每种界面各有 full / light 两个包：
+GitHub Release 提供简约界面和完整图形界面,每种界面各有两个包：
 
-- `shredder-simple-ui-*-win-x64-full.zip`:简约界面,自带 .NET 10,体积大
-- `shredder-simple-ui-*-win-x64-light.zip`:简约界面,需要已安装 .NET 10 Desktop Runtime,体积小
-- `shredder-standard-ui-*-win-x64-full.zip`:完整图形界面,自带 .NET 10,体积大
-- `shredder-standard-ui-*-win-x64-light.zip`:完整图形界面,需要已安装 .NET 10 Desktop Runtime,体积小
+- `shredder_simple.zip`:简约界面,需要已安装 .NET 10 Desktop Runtime,体积小,解压后运行 `shredder_simple.exe`
+- `shredder_simple_net10.zip`:简约界面,自带 .NET 10,体积大,解压后运行 `shredder_simple.exe`
+- `shredder_full.zip`:完整图形界面,需要已安装 .NET 10 Desktop Runtime,体积小,解压后运行 `shredder_full.exe`
+- `shredder_full_net10.zip`:完整图形界面,自带 .NET 10,体积大,解压后运行 `shredder_full.exe`
 
-拿不准就下载 `simple-ui full`。已经安装 .NET 10 Desktop Runtime 的用户可下载 `light` 小体积版。
+拿不准就下载 `shredder_simple_net10.zip`。已经安装 .NET 10 Desktop Runtime 的用户可下载不带 `_net10` 的小体积版。
 
 ## 功能
 
@@ -65,7 +65,7 @@ dotnet test  Shredder.Tests
 
 ## 测试
 
-`Shredder.Tests` 当前 **178 个单元 / 集成测试**全部通过，包含算法、配置注入、目录并发、
+`Shredder.Tests` 当前 **191 个单元 / 集成测试**全部通过，包含算法、配置注入、目录并发、
 FreeSpace SSD 策略、回收站结构化结果、文件系统边界（ADS / Junction / 只读 / 占用文件）、
 GUI publish smoke 等场景。本地复现：
 
