@@ -12,8 +12,8 @@ GitHub Release 提供简约界面和完整图形界面,每种界面各有 full /
 
 - `shredder-simple-ui-*-win-x64-full.zip`:简约界面,自带 .NET 10,体积大
 - `shredder-simple-ui-*-win-x64-light.zip`:简约界面,需要已安装 .NET 10 Desktop Runtime,体积小
-- `shredder-full-ui-*-win-x64-full.zip`:完整图形界面,自带 .NET 10,体积大
-- `shredder-full-ui-*-win-x64-light.zip`:完整图形界面,需要已安装 .NET 10 Desktop Runtime,体积小
+- `shredder-standard-ui-*-win-x64-full.zip`:完整图形界面,自带 .NET 10,体积大
+- `shredder-standard-ui-*-win-x64-light.zip`:完整图形界面,需要已安装 .NET 10 Desktop Runtime,体积小
 
 拿不准就下载 `simple-ui full`。已经安装 .NET 10 Desktop Runtime 的用户可下载 `light` 小体积版。
 

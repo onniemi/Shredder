@@ -81,7 +81,7 @@ jobs:
             -p:PublishSingleFile=true \
             -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:Version=${{ steps.ver.outputs.version }} \
-            -o publish/full-ui-full
+            -o publish/standard-ui-full
 
       - name: Publish full UI light (requires .NET Desktop Runtime)
         if: startsWith(github.ref, 'refs/tags/v')
@@ -94,7 +94,7 @@ jobs:
             -p:PublishSingleFile=true \
             -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:Version=${{ steps.ver.outputs.version }} \
-            -o publish/full-ui-light
+            -o publish/standard-ui-light
 
       - name: Zip release assets
         if: startsWith(github.ref, 'refs/tags/v')
@@ -104,10 +104,10 @@ jobs:
             -DestinationPath shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
           Compress-Archive -Path publish/simple-ui-light/* `
             -DestinationPath shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
-          Compress-Archive -Path publish/full-ui-full/* `
-            -DestinationPath shredder-full-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
-          Compress-Archive -Path publish/full-ui-light/* `
-            -DestinationPath shredder-full-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
+          Compress-Archive -Path publish/standard-ui-full/* `
+            -DestinationPath shredder-standard-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
+          Compress-Archive -Path publish/standard-ui-light/* `
+            -DestinationPath shredder-standard-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -119,8 +119,8 @@ jobs:
 
             - `shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip`:简约界面,自带 .NET 10,体积大
             - `shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip`:简约界面,需要已安装 .NET 10 Desktop Runtime,体积小
-            - `shredder-full-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip`:完整图形界面,自带 .NET 10,体积大
-            - `shredder-full-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip`:完整图形界面,需要已安装 .NET 10 Desktop Runtime,体积小
+            - `shredder-standard-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip`:完整图形界面,自带 .NET 10,体积大
+            - `shredder-standard-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip`:完整图形界面,需要已安装 .NET 10 Desktop Runtime,体积小
 
             拿不准就下载 `simple-ui full`。已经安装 .NET 10 Desktop Runtime 的用户可下载 `light` 小体积版。
 
@@ -128,8 +128,8 @@ jobs:
           files: |
             shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
             shredder-simple-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
-            shredder-full-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
-            shredder-full-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
+            shredder-standard-ui-v${{ steps.ver.outputs.version }}-win-x64-full.zip
+            shredder-standard-ui-v${{ steps.ver.outputs.version }}-win-x64-light.zip
 
       - name: Remove old release assets
         if: startsWith(github.ref, 'refs/tags/v')
@@ -141,8 +141,8 @@ jobs:
             const keep = new Set([
               `shredder-simple-ui-v${version}-win-x64-full.zip`,
               `shredder-simple-ui-v${version}-win-x64-light.zip`,
-              `shredder-full-ui-v${version}-win-x64-full.zip`,
-              `shredder-full-ui-v${version}-win-x64-light.zip`,
+              `shredder-standard-ui-v${version}-win-x64-full.zip`,
+              `shredder-standard-ui-v${version}-win-x64-light.zip`,
             ]);
             const { data: release } = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
