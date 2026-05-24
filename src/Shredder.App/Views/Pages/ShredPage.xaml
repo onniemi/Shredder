@@ -239,7 +239,7 @@
         </Grid>
 
         <Grid Grid.RowSpan="4"
-              Background="Transparent"
+              Background="#FF1F1F1F"
               Grid.IsSharedSizeScope="True"
               Visibility="{Binding IsHistoryVisible, Converter={StaticResource BoolToVisibility}}">
             <Grid.RowDefinitions>
@@ -314,12 +314,13 @@
             </Border>
 
             <Border Grid.Row="2"
+                    Background="#FF1F1F1F"
                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                     BorderThickness="1,0,1,1"
                     CornerRadius="0,0,4,4">
                 <ListView ItemsSource="{Binding HistoryItems}"
                           BorderThickness="0"
-                          Background="Transparent"
+                          Background="#FF1F1F1F"
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListView.ItemContainerStyle>
                         <Style TargetType="{x:Type ListViewItem}">

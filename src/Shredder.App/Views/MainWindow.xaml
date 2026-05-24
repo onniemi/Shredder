@@ -6,10 +6,11 @@
                  Icon="/Assets/ShredderIcon.ico"
                  MinHeight="520" MinWidth="760"
                  ExtendsContentIntoTitleBar="True"
-                 WindowBackdropType="Mica"
+                 Background="#FF1F1F1F"
+                 WindowBackdropType="None"
                  WindowCornerPreference="Round"
                  WindowStartupLocation="CenterScreen">
-    <Grid>
+    <Grid Background="#FF1F1F1F">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
