@@ -239,7 +239,7 @@
         </Grid>
 
         <Grid Grid.RowSpan="4"
-              Background="#FF1F1F1F"
+              Background="Transparent"
               Grid.IsSharedSizeScope="True"
               Visibility="{Binding IsHistoryVisible, Converter={StaticResource BoolToVisibility}}">
             <Grid.RowDefinitions>
