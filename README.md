@@ -10,12 +10,10 @@ Windows 平台的安全文件粉碎工具 · C# / .NET 10 / WPF
 
 GitHub Release 提供简约界面和完整图形界面,每种界面各有 full / light 两个包：
 
-| 文件 | 适合谁 | 说明 |
-|---|---|---|
-| `shredder-simple-ui-*-win-x64-full.zip` | 想要最简单界面,且不想安装运行时的用户 | 简约界面,只显示文件/文件夹粉碎,自带 .NET 10 桌面运行时,体积较大 |
-| `shredder-simple-ui-*-win-x64-light.zip` | 想要最简单界面,且已安装 .NET 10 Desktop Runtime 的用户 | 简约界面,体积小,需要本机已有运行时 |
-| `shredder-full-ui-*-win-x64-full.zip` | 想要完整图形界面,且不想安装运行时的用户 | 完整图形界面,自带 .NET 10 桌面运行时,体积较大 |
-| `shredder-full-ui-*-win-x64-light.zip` | 想要完整图形界面,且已安装 .NET 10 Desktop Runtime 的用户 | 完整图形界面,体积小,需要本机已有运行时 |
+- `shredder-simple-ui-*-win-x64-full.zip`:简约界面,自带 .NET 10,体积大
+- `shredder-simple-ui-*-win-x64-light.zip`:简约界面,需要已安装 .NET 10 Desktop Runtime,体积小
+- `shredder-full-ui-*-win-x64-full.zip`:完整图形界面,自带 .NET 10,体积大
+- `shredder-full-ui-*-win-x64-light.zip`:完整图形界面,需要已安装 .NET 10 Desktop Runtime,体积小
 
 拿不准就下载 `simple-ui full`。已经安装 .NET 10 Desktop Runtime 的用户可下载 `light` 小体积版。
 
